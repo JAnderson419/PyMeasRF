@@ -173,13 +173,13 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, dela
                 #pna measurement here
                 print("SMU Voltages set to the following - Gate: " + str(vg) + " Drain: " + str(vd) + " Drive: " + str(vdr))
                 print("Now Sleeping for 2 min to allow system to equilibriate")
-                for i in range(delay)
+                for i in range(delay):
                     time.sleep(1)
                     if i%10 == 0:
                         print(str(i) + "/" + str(delay))
 
                 filename = '{}_Vg{}Vd{}Vdr{}.s{}p'.format(testname,str(vg).replace('.','_'),str(vd).replace('.','_'),str(vdr).replace('.','_'),sPorts)
-                pnaSetup(pna, **pnaparms)
+                pnaSetup(pna)
                 for s in sParms:
                     measName = 'meas'+s 
                     print(measName)
@@ -262,22 +262,16 @@ def main():
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
-    Vdr = [0.0] # V
-    Vg = [0.0] # V
-    Vd = [0.0] # V
-    compliance = 0.100
-    maxVoltage = 100
-    ports = 3 # number of ports used in the measurement
+    Vdr = [1.0, 4.0] # V_DRIVE
+    Vg = [2.0] # V_GATE
+    Vd = [3.0] # V_DRAIN
+    compliance = 0.100 #Amps IE 105uA = 0.000105 
+    maxVoltage = 100 #Maximum expected voltage to be used 
+    ports = 2 # number of sPorts used in the measurement
+    delayTime = 20 #Time between setting SMU voltage and measurement in seconds
 
-    pnaTestParms = {'ifBandwidth' : '50', # Hz, see above for options
-#                    'startFreq' : 30E9, #Hz # use only if code does cal
-#                    'stopFreq' : 33E9, #Hz # use only if code does cal
-                    'nPoints' : 201,
-                    'avgMode' : 'SWEEP', # POINT or SWEEP
-                    'nAvg' : 1
-                    }
 
-    testname = 'load' # name snp files will be saved as current file name format is as follows:
+    testname = 'Test2' # name snp files will be saved as current file name format is as follows:
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'
     #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
     #load_Vg1_0Vd2_0Vg3_0.s2p
@@ -288,6 +282,14 @@ def main():
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
+#       pnaTestParms = {'ifBandwidth' : '50', # Hz, see above for options
+#                    'startFreq' : 30E9, #Hz # use only if code does cal
+#                    'stopFreq' : 33E9, #Hz # use only if code does cal
+#                    'nPoints' : 201,
+#                    'avgMode' : 'SWEEP', # POINT or SWEEP
+#                    'nAvg' : 1
+#                    }
+    pnaTestParms=None
     localsavedir = 'C:\\Test' # Does nothing currently
     voltages = [Vg,Vd,Vdr]
     
