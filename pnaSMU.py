@@ -196,7 +196,7 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, dela
                 pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE {},\'{}\\{}\''.format('\'1,2,3\'',savedir,filename)) #read 16 S parms in SNP format
                 ####********************* THIS COMMAND CAN NOT CREATE NEW FOLDERS!!!!********************!!!!!
                 pna.query('*OPC?') 
-                pna.write('CALCulate1:PARameter:DELete \"{}\"'.format(measName))
+                pna.write('CALCulate1:PARameter:DELete:ALL')
 
 #                shutil.copy('\\\\192.168.1.1\\{}\\{}'.format(savedir,filename),'{}\\{}'.format(localsavedir,filename))                
                 
