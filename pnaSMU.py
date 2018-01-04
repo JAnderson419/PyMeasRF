@@ -43,10 +43,10 @@ def connect():
     
     return ([gate,drain,drive],pna)
     
-def smuSetup(smu, comp = None):
+def smuSetup(smu, voltRange = 21, comp = 0.000105):
     '''
     A function for all general smu setup.
-    
+    System configures the compliance to the default
     Parameters:
     -----------
     smu
@@ -61,7 +61,9 @@ def smuSetup(smu, comp = None):
    # smu.write(':DISPlay:ENABle 1; CNDisplay')
     
     if comp: # set compliance if given. Default for 2400 is 105uA, 21V
-        smu.write(':SENSe:CURRent:PROTection:LEVel '+str(comp))
+        smu.write(':SENSe:VOLTage:RANGe ' + str(voltRange))
+        smu.write(':SENSe:CURRent:PROTection:LEVel ' + str(comp))
+
 
 def pnaInitSetup(pna):
 #    pna.write("SYST:FPReset") # reset, delete measurements, traces, & windows
@@ -104,7 +106,7 @@ def pnaSetup(pna, ifBandwidth = None,startFreq = None, stopFreq = None,
     if nAvg: pna.write('SENSe1:AVERage:COUNt {}'.format(nAvg))
     if ifBandwidth: pna.write('SENSe1:BANDwidth {}'.format(ifBandwidth))
     
-def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, pnaparms = None):
+def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
     '''
     PNA measurement with up to three SMU voltage sweeps
     
@@ -131,6 +133,7 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, pnap
     N/A
     
     '''
+
     s2 = ['S11','S12',
           'S21','S22']
     s3 = ['S11','S12','S13',
@@ -152,6 +155,10 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, pnap
     gate = smus[0]
     drain = smus[1]
     drive = smus[2]
+    for x in smus:
+        x.write('SOURce:VOLTage:LEVel 0.0')
+        x.write(':CONFigure:VOLTage:DC')
+        x.query('*OPC?')
     
     for vg in voltages[0]:
         gate.write('SOURce:VOLTage:LEVel '+str(vg)) # Sets voltage, output on
@@ -166,7 +173,11 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, pnap
                 #pna measurement here
                 print("SMU Voltages set to the following - Gate: " + str(vg) + " Drain: " + str(vd) + " Drive: " + str(vdr))
                 print("Now Sleeping for 2 min to allow system to equilibriate")
-                time.sleep(120)
+                for i in range(delay)
+                    time.sleep(1)
+                    if i%10 == 0:
+                        print(str(i) + "/" + str(delay))
+
                 filename = '{}_Vg{}Vd{}Vdr{}.s{}p'.format(testname,str(vg).replace('.','_'),str(vd).replace('.','_'),str(vdr).replace('.','_'),sPorts)
                 pnaSetup(pna, **pnaparms)
                 for s in sParms:
@@ -183,10 +194,14 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, pnap
 #                    pna.write("DISPlay:WINDow1:TRACe1:DELete")                                       
                 print(':CALCulate1:DATA:SNP:PORTs:SAVE {},\'{}\\{}\' '.format('\'1,2,3\'',savedir,filename)) # query unterminated, also need to insert quotes around directory name
                 pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE {},\'{}\\{}\''.format('\'1,2,3\'',savedir,filename)) #read 16 S parms in SNP format
+                ####********************* THIS COMMAND CAN NOT CREATE NEW FOLDERS!!!!********************!!!!!
                 pna.query('*OPC?') 
 #                shutil.copy('\\\\192.168.1.1\\{}\\{}'.format(savedir,filename),'{}\\{}'.format(localsavedir,filename))                
                 
     for x in smus:
+        x.write('SOURce:VOLTage:LEVel 0.0')
+        x.write(':CONFigure:VOLTage:DC')
+        x.query('*OPC?')
         x.write(':OUTPut:STATe OFF')
         
 
@@ -210,6 +225,9 @@ def disconnect(smus, pna):
     pna.write('SENSe1:SWEep:MODE HOLD')    
     pna.close()
     for x in smus:
+        x.write('SOURce:VOLTage:LEVel 0.0')
+        x.write(':CONFigure:VOLTage:DC')
+        x.query('*OPC?')
         x.write(':OUTPut:STATe OFF')
         x.close()
     
@@ -238,10 +256,17 @@ def main():
         -nPoints: number of points in measurement (1 to 32,001)
     '''
 
-    ### User specified test Parameters ###
+    ############################# User specified test Parameters ###################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
     Vdr = [0.0] # V
     Vg = [0.0] # V
     Vd = [0.0] # V
+    compliance = 0.100
+    maxVoltage = 100
     ports = 3 # number of ports used in the measurement
 
     pnaTestParms = {'ifBandwidth' : '50', # Hz, see above for options
@@ -251,18 +276,26 @@ def main():
                     'avgMode' : 'SWEEP', # POINT or SWEEP
                     'nAvg' : 1
                     }
-    testname = 'load' # name snp files will be saved as
+
+    testname = 'load' # name snp files will be saved as current file name format is as follows:
+    #'testname_VgX_XVdY_YVdrZ_Z.sXp'
+    #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
+    #load_Vg1_0Vd2_0Vg3_0.s2p
     savedir = 'C:\\Documents\\pyvisa' # Directory where snp files will be saved on PNA
+    ############################# END User specified test Parameters ###############################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
     localsavedir = 'C:\\Test' # Does nothing currently
-    ######################################
-    
     voltages = [Vg,Vd,Vdr]
     
     smus, pna = connect()
-    for x in smus: smuSetup(x)
+    for x in smus: smuSetup(x, maxVoltage, compliance)
     pnaInitSetup(pna)
     try:
-      sParmMeas(voltages, smus, pna, ports, savedir, localsavedir, testname)
+      sParmMeas(voltages, smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     except visa.VisaIOError as e:
         print(e.args)
         pna.write('SENSe1:SWEep:MODE HOLD')    
