@@ -179,7 +179,7 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, dela
                         print(str(i) + "/" + str(delay))
 
                 filename = '{}_Vg{}Vd{}Vdr{}.s{}p'.format(testname,str(vg).replace('.','_'),str(vd).replace('.','_'),str(vdr).replace('.','_'),sPorts)
-                pnaSetup(pna)
+                pnaSetup(pna, **pnaparms)
                 for s in sParms:
                     measName = 'meas'+s 
                     print(measName)
@@ -282,14 +282,14 @@ def main():
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
-#       pnaTestParms = {'ifBandwidth' : '50', # Hz, see above for options
+    pnaTestParms = {'ifBandwidth' : '50', # Hz, see above for options
 #                    'startFreq' : 30E9, #Hz # use only if code does cal
 #                    'stopFreq' : 33E9, #Hz # use only if code does cal
-#                    'nPoints' : 201,
-#                    'avgMode' : 'SWEEP', # POINT or SWEEP
-#                    'nAvg' : 1
-#                    }
-    pnaTestParms=None
+                    'nPoints' : 201,
+                    'avgMode' : 'SWEEP', # POINT or SWEEP
+                    'nAvg' : 1
+                    }
+#    pnaTestParms=None
     localsavedir = 'C:\\Test' # Does nothing currently
     voltages = [Vg,Vd,Vdr]
     
