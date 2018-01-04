@@ -8,7 +8,7 @@ HybridMEMS
 import visa
 import numpy as np
 import shutil
-
+import time
 
 def connect():
     '''
@@ -164,7 +164,9 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, pnap
                     x.query('*OPC?')
                    # print(x.query(':SENSe:DATA:LATest')) #err -113, -440                 
                 #pna measurement here
-
+                print("SMU Voltages set to the following - Gate: " + str(vg) + " Drain: " + str(vd) + " Drive: " + str(vdr))
+                print("Now Sleeping for 2 min to allow system to equilibriate")
+                time.sleep(120)
                 filename = '{}_Vg{}Vd{}Vdr{}.s{}p'.format(testname,str(vg).replace('.','_'),str(vd).replace('.','_'),str(vdr).replace('.','_'),sPorts)
                 pnaSetup(pna, **pnaparms)
                 for s in sParms:
