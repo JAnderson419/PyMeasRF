@@ -257,6 +257,16 @@ def main():
     voltages = [Vg,Vd,Vdr]
     
     smus, pna = connect()
+    
+    ###############################
+    # Need to make sure calset is applied to measurements
+    # pna.query('CSET:CATalog?')
+    # pna.query('SENSe1:CORRection:CSET:ACTivate? NAME')
+    #pna.query('*OPC?')
+    #pna.write('SENSe1:CORRection:CSET:ACTivate <string>, <bool>')
+    # CalSet_###
+    ##########################
+    
     for x in smus: smuSetup(x)
     pnaInitSetup(pna)
     try:
