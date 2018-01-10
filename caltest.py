@@ -292,6 +292,7 @@ def pnaDisconnect(pna):
     pna.close()
     
 def main():
+   def main():
     '''
     Carry out PNA S-parameter measurements with varying DC biases.
     
@@ -316,37 +317,48 @@ def main():
         -nPoints: number of points in measurement (1 to 32,001)
     '''
 
-    ### User specified test Parameters ###
-    Vdr = [1.0] # V_DRIVE
-    Vg = [2.0] # V_GATE
-    Vd = [3.0] # V_DRAIN
-    ports = 2 # number of ports used in the measurement
+    ############################# User specified test Parameters ###################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ports = 2 # number of sPorts used in the measurement
 
-    pnaTestParms = {'ifBandwidth' : '50', # Hz, see above for options
+    testname = 'Test2' # name snp files will be saved as current file name format is as follows:
+    #'testname_VgX_XVdY_YVdrZ_Z.sXp'
+    #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
+    #load_Vg1_0Vd2_0Vg3_0.s2p
+    savedir = 'C:\\Documents\\pyvisa' # Directory where snp files will be saved on PNA
+    ############################# END User specified test Parameters ###############################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    ################################################################################################################
+    pnaTestParms = {
+#                    'ifBandwidth' : '50', # Hz, see above for options
 #                    'startFreq' : 30E9, #Hz # use only if code does cal
 #                    'stopFreq' : 33E9, #Hz # use only if code does cal
-                    'nPoints' : 201,
-                    'avgMode' : 'SWEEP', # POINT or SWEEP
-                    'nAvg' : 1
+#                    'nPoints' : 201,
+#                    'avgMode' : 'SWEEP', # POINT or SWEEP
+#                    'nAvg' : 1
                     }
-    testname = 'load' # name snp files will be saved as
-    savedir = 'C:\\Documents\\pyvisa\\' # Directory where snp files will be saved on PNA
+#    pnaTestParms=None
     localsavedir = 'C:\\Test' # Does nothing currently
-    ######################################
-       
-    pna = pnaConnect()
-    pnaInitSetup(pna)
+    
+    pna = pnaUtils.AgilentPNAx('TCPIP0::192.168.1.1::inst0::INSTR')
+
+    pna.pnaInitSetup()
     try:
-      sMeas(pna, ports, savedir, localsavedir, testname, pnaTestParms)
+      pna.sMeas(ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     except visa.VisaIOError as e:
         print(e.args)
-        pna.write('SENSe1:SWEep:MODE HOLD')    
-          
-        
-   # pna.query('CALCulate1:PARameter:CATalog') # VisaIOError: VI_ERROR_TMO (-1073807339): Timeout expired before operation completed.
-    
-    pnaDisconnect(pna)
-    
+        pna.outputOff   
+
+         
+    pna.disconnect()   
     exit
+    
 if __name__ == "__main__":
     main()
