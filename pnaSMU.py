@@ -101,7 +101,7 @@ def main():
     Vd = [3.0] # V_DRAIN
     compliance = 0.100 #Amps IE 105uA = 0.000105 
     maxVoltage = 100 #Maximum expected voltage to be used 
-    ports = 2 # number of sPorts used in the measurement
+    ports = '1,2' # string containing comma separated port numbers to be used
     delayTime = 20 #Time between setting SMU voltage and measurement in seconds
 
 

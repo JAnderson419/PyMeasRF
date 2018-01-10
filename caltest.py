@@ -323,7 +323,7 @@ def main():
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
-    ports = 2 # number of sPorts used in the measurement
+    ports = '1,2' # string containing comma separated port numbers to be used
 
     testname = 'Test2' # name snp files will be saved as current file name format is as follows:
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'

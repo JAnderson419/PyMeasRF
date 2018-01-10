@@ -101,12 +101,14 @@ class AgilentPNAx:
               'S31','S32','S33','S34',
               'S41','S42','S43','S44']
         
-        if sPorts < 2 or sPorts > 4:
+        numPorts = len(re.findall('\d+',str))
+        
+        if numPorts < 2 or numPorts > 4:
             raise ValueError('Please Specify a number of ports between 2 and 4. '
-                             'Currently, {} ports are specified.'.format(sPorts))
+                             'Currently, {} ports are specified.'.format(str(numPorts)))
         s = [s2,s3,s4]
-        sParms = s[sPorts-2]
-        filename = '{}.s{}p'.format(testname,sPorts)
+        sParms = s[numPorts-2]
+        filename = '{}.s{}p'.format(testname,numPorts)
         self.pnaSetup(pna, **pnaparms)
         for s in sParms:
             measName = 'meas'+s 
@@ -121,8 +123,8 @@ class AgilentPNAx:
             pna.timeout = 2000
             pna.write("DISPlay:WINDow1:TRACe1:DELete") 
             self.checkCal()                                   
-        print(':CALCulate1:DATA:SNP:PORTs:SAVE {},\'{}\\{}\' '.format('\'1,2,3\'',savedir,filename)) # query unterminated, also need to insert quotes around directory name
-        pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE {},\'{}\\{}\''.format('\'1,2\'',savedir,filename)) #read 16 S parms in SNP format
+        print(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\' '.format(sPorts,savedir,filename)) # query unterminated, also need to insert quotes around directory name
+        pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE {},\'{}\\{}\''.format(sPorts,savedir,filename)) #read 16 S parms in SNP format
         pna.query('*OPC?') 
 
     def outputOff(self):
