@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""
-Jackson Anderson
+'''
+@author: Jackson Anderson
 ander906@purdue.edu
 HybridMEMS
-"""
+'''
 
 import visa
 import numpy as np
@@ -12,7 +12,7 @@ import AgilentPNAXUtils as pnaUtils
 import Keithley2400 as k2400
 
     
-def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
+def sParmMeas3(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
     '''
     PNA measurement with up to three SMU voltage sweeps
     
@@ -63,6 +63,54 @@ def sParmMeas(voltages, smus, pna, sPorts, savedir, localsavedir, testname, dela
                 testname2 = '{}_Vg{}Vd{}Vdr{}'.format(testname,str(vg).replace('.','_'),str(vd).replace('.','_'),str(vdr).replace('.','_'))
                 pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
     for x in smus: x.outputOff
+    
+def sParmMeas1(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
+    '''
+    PNA measurement with up to three SMU voltage sweeps
+    
+    TODO: Implement base class for measurements.
+    
+    Parameters:
+    -----------
+    voltages : list
+        A list containing the three voltage values/sweeps for the SMUs
+    smus : list
+        A list of the connected SMUs
+    pna
+        The connected PNA
+    sParms : list
+        The S-parameters to be measured
+    savedir : string
+        The directory on the PNA in which to save snp files.
+    testname : string
+    pnaparms : dict
+        A dictionary containing test parameters to set on the pna.
+        
+    Returns:
+    ----------
+    N/A
+    
+    '''
+   
+    # explicitly redefine smus as local vars for readability 
+    gate = smus[0]
+
+    for x in smus: x.setVoltage(0)
+        
+    for vg in voltages[0]:
+        gate.setVoltage(vg)
+        
+
+        print("SMU Voltages set to the following - Gate: " + str(vg))
+        print("Now Sleeping for {} sec to allow system to equilibriate".format(str(delay)))
+        for i in range(delay):
+            time.sleep(1)
+            if i%10 == 0:
+                print(str(i) + "/" + str(delay))
+
+        testname2 = '{}_Vg{}'.format(testname,str(vg).replace('.','_'))
+        pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
+    for x in smus: x.outputOff
 
     
 def main():
@@ -98,11 +146,11 @@ def main():
     ################################################################################################################
     Vdr = [1.0, 4.0] # V_DRIVE
     Vg = [2.0] # V_GATE
-    Vd = [3.0] # V_DRAIN
+    Vd = [0.8,1.0] # V_DRAIN
     compliance = 0.100 #Amps IE 105uA = 0.000105 
     maxVoltage = 100 #Maximum expected voltage to be used 
     ports = '1,2' # string containing comma separated port numbers to be used
-    delayTime = 20 #Time between setting SMU voltage and measurement in seconds
+    delayTime = 10 #Time between setting SMU voltage and measurement in seconds
 
 
     testname = 'Test2' # name snp files will be saved as current file name format is as follows:
@@ -126,19 +174,21 @@ def main():
                     }
 #    pnaTestParms=None
     localsavedir = 'C:\\Test' # Does nothing currently
-    voltages = [Vg,Vd,Vdr]
+#    voltages = [Vg,Vd,Vdr]
+    voltages = [Vd]
     
     pna = pnaUtils.AgilentPNAx('TCPIP0::192.168.1.1::inst0::INSTR')
-    gate = k2400.Keithley2400('GPIB1::24::INSTR')
+#    gate = k2400.Keithley2400('GPIB1::24::INSTR')
     drain = k2400.Keithley2400('GPIB1::25::INSTR')
-    drive = k2400.Keithley2400('GPIB1::26::INSTR')
+#    drive = k2400.Keithley2400('GPIB1::26::INSTR')
     
-    smus = [gate,drain,drive]
+#    smus = [gate,drain,drive]
+    smus = [drain]
     
     for x in smus: x.smuSetup(maxVoltage, compliance)
     pna.pnaInitSetup()
     try:
-      sParmMeas(voltages, smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
+      sParmMeas1(voltages, smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     except visa.VisaIOError as e:
         print(e.args)
         pna.outputOff   

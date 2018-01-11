@@ -1,4 +1,9 @@
 #AgilentPNAXUtils.py
+'''
+@author: Jackson Anderson
+ander906@purdue.edu
+HybridMEMS
+'''
 
 import visa
 import numpy as np
@@ -53,6 +58,10 @@ class AgilentPNAx:
         traces = pna.query('DISPlay:WINDow1:CATalog?')
         if re.search('(^|,)1,',traces):
             pna.write("DISPlay:WINDow1:TRACe1:DELete") 
+            
+    def disconnect(self):
+        self.outputOff()
+        self.visaobj.close()
         
         
     def pnaSetup(self, ifBandwidth = None,startFreq = None, stopFreq = None,
@@ -71,6 +80,7 @@ class AgilentPNAx:
         '''
         #set up channel here: power, cal, if bandwidth, # pts, sweep settings, avg, trigger
         pna = self.visaobj
+        pna.write('CALCulate:PARameter:DELete:ALL')
     
         if nPoints: pna.write('SENSe1:SWEep:POINts '+str(nPoints))
         pna.write('SENSe1:SWEep:GENeration ANALog')
@@ -101,15 +111,16 @@ class AgilentPNAx:
               'S31','S32','S33','S34',
               'S41','S42','S43','S44']
         
-        numPorts = len(re.findall('\d+',str))
+        numPorts = len(re.findall('\d+',sPorts))
         
         if numPorts < 2 or numPorts > 4:
             raise ValueError('Please Specify a number of ports between 2 and 4. '
                              'Currently, {} ports are specified.'.format(str(numPorts)))
         s = [s2,s3,s4]
         sParms = s[numPorts-2]
-        filename = '{}.s{}p'.format(testname,numPorts)
-        self.pnaSetup(pna, **pnaparms)
+        filename = '{}.s{}p'.format(testname,str(numPorts))
+        self.pnaSetup(**pnaparms)
+        self.checkCal()
         for s in sParms:
             measName = 'meas'+s 
             print(measName)
@@ -121,11 +132,11 @@ class AgilentPNAx:
             pna.write("SENSe1:SWEep:MODE SINGle") 
             pna.query('*OPC?')
             pna.timeout = 2000
-            pna.write("DISPlay:WINDow1:TRACe1:DELete") 
-            self.checkCal()                                   
+            pna.write("DISPlay:WINDow1:TRACe1:DELete")                                            
         print(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\' '.format(sPorts,savedir,filename)) # query unterminated, also need to insert quotes around directory name
-        pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE {},\'{}\\{}\''.format(sPorts,savedir,filename)) #read 16 S parms in SNP format
+        pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\''.format(sPorts,savedir,filename)) #read 16 S parms in SNP format
         pna.query('*OPC?') 
+        self.outputOff()
 
     def outputOff(self):
         self.visaobj.write('SENSe1:SWEep:MODE HOLD') 
@@ -145,7 +156,6 @@ class AgilentPNAx:
             
     def getCalInfo(self):
         print(self.visaobj.query('SENSe1:CORRection:CSET:ACTivate? NAME'))
-        print(self.visaobj.query('SENSe1:CORRection:CSET:TSET:TYPE?'))
         print(self.visaobj.query('SENSe1:CORRection:CSET:TYPE:CATalog? NAME'))
         
     def getAvailCals(self):
