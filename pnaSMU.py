@@ -11,6 +11,38 @@ import time
 import AgilentPNAXUtils as pnaUtils
 import Keithley2400 as k2400
 
+def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
+  if smus:  
+    for x in smus:
+      if x.voltages == None:
+        raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
+    currentV = [None for i in range(0,len(smus))]
+    
+    def setVoltageLoop(l = len(smus)):
+      if l >= 1:
+        for i in smus[l-1].voltages:
+          currentV[l-1] = i
+          setVoltageLoop(l-1)
+        else:
+          print('Setting SMU voltages. ',end='')
+          testname2 = testname
+          for i,v in enumerate(currentV):
+            print('{} {} V'.format(smus[i].label,v), end='  ')
+            smus[i].setVoltage(v)
+            testname2 = testname2 + '_{}{}V'.format(smus[i].label,str(v).replace('.','_'))
+          print("\nWaiting for {} sec to allow system to equilibriate".format(str(delay)))
+          for i in range(delay):
+              time.sleep(1)
+              if i%10 == 0:
+                  print(str(i) + "/" + str(delay))
+          
+          pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
+          
+      setVoltageLoop()
+  else:
+    pna.sMeas(sPorts, savedir, localsavedir, testname, pnaparms)
+      
+  for x in smus: x.outputOff()
     
 def sParmMeas3(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
     '''
@@ -137,21 +169,29 @@ def main():
         -centerFreq & spanFreq: frequency range of measurement. Max: 50 GHz
         -nPoints: number of points in measurement (1 to 32,001)
     '''
-
+    
+    pna = pnaUtils.AgilentPNAx('TCPIP0::192.168.1.1::inst0::INSTR')
     ############################# User specified test Parameters ###################################################
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
-    Vdr = [1.0, 4.0] # V_DRIVE
-    Vg = [2.0] # V_GATE
-    Vd = [0.8,1.0] # V_DRAIN
+#    Vdr = [1.0, 4.0] # V_DRIVE
+#    Vg = [2.0] # V_GATE
+#    Vd = [0.8,1.0] # V_DRAIN
+
+    smus = [
+          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0]),
+          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [1.0, 4.0]),
+          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
+           ]
+
     compliance = 0.100 #Amps IE 105uA = 0.000105 
     maxVoltage = 100 #Maximum expected voltage to be used 
     ports = '1,2' # string containing comma separated port numbers to be used
     delayTime = 10 #Time between setting SMU voltage and measurement in seconds
-
+    
 
     testname = 'Test2' # name snp files will be saved as current file name format is as follows:
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'
@@ -175,20 +215,20 @@ def main():
 #    pnaTestParms=None
     localsavedir = 'C:\\Test' # Does nothing currently
 #    voltages = [Vg,Vd,Vdr]
-    voltages = [Vd]
+#    voltages = [Vd]
     
-    pna = pnaUtils.AgilentPNAx('TCPIP0::192.168.1.1::inst0::INSTR')
-#    gate = k2400.Keithley2400('GPIB1::24::INSTR')
-    drain = k2400.Keithley2400('GPIB1::25::INSTR')
-#    drive = k2400.Keithley2400('GPIB1::26::INSTR')
+#    pna = pnaUtils.AgilentPNAx('TCPIP0::192.168.1.1::inst0::INSTR')
+#    gate = k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0])
+#    drain = k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [1.0, 4.0])
+#    drive = k2400.Keithley2400('GPIB1::26::INSTR', label = drive, voltages = [0])
     
 #    smus = [gate,drain,drive]
-    smus = [drain]
+#    smus = [drain]
     
     for x in smus: x.smuSetup(maxVoltage, compliance)
     pna.pnaInitSetup()
     try:
-      sParmMeas1(voltages, smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
+      sParmMeas(smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     except visa.VisaIOError as e:
         print(e.args)
         pna.outputOff   

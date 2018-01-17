@@ -54,17 +54,24 @@ class AgilentPNAx:
         pna.write('SENSe1:SWEep:MODE HOLD')
         pna.write('DISPlay:ENABLE ON') # set to OFF to speed up measurement
         
-        #TODO: add check to see if trace exists or not
-        traces = pna.query('DISPlay:WINDow1:CATalog?')
-        if re.search('(^|,)1,',traces):
-            pna.write("DISPlay:WINDow1:TRACe1:DELete") 
+       
+
+    def clearWindow(self,winNum):
+        traces = self.visaobj.query('DISPlay:WINDow{}:CATalog?'.format(winNum))
+        if re.search("EMPTY",traces):
+            next
+        else:
+            traces = traces.split(',')
+            for trace in traces:
+                self.visaobj.write("DISPlay:WINDow{}:{}:DELete".format(winNum,trace)) 
             
     def disconnect(self):
         self.outputOff()
+#        self.clearWindows()
         self.visaobj.close()
         
         
-    def pnaSetup(self, ifBandwidth = None,startFreq = None, stopFreq = None,
+    def pnaSetup(self, portNums, ifBandwidth = None,startFreq = None, stopFreq = None,
                  centFreq = None, spanFreq = None, nPoints = None, 
                  avgMode = None, nAvg = None):
         '''
@@ -81,6 +88,10 @@ class AgilentPNAx:
         #set up channel here: power, cal, if bandwidth, # pts, sweep settings, avg, trigger
         pna = self.visaobj
         pna.write('CALCulate:PARameter:DELete:ALL')
+        
+        for n in portNums: 
+          pna.write('DISPlay:WINDow:ENABle 1'.format(n))
+          self.clearWindow(n)
     
         if nPoints: pna.write('SENSe1:SWEep:POINts '+str(nPoints))
         pna.write('SENSe1:SWEep:GENeration ANALog')
@@ -101,38 +112,37 @@ class AgilentPNAx:
     def sMeas(self, sPorts, savedir, localsavedir, testname, pnaparms = None):
         pna = self.visaobj
         
-        s2 = ['S11','S12',
-              'S21','S22']
-        s3 = ['S11','S12','S13',
-              'S21','S22','S23',
-              'S31','S32','S33']
-        s4 = ['S11','S12','S13','S14',
-              'S21','S22','S23','S24',
-              'S31','S32','S33','S34',
-              'S41','S42','S43','S44']
+        sParms = []
+        nums = sPorts.split(',')
         
-        numPorts = len(re.findall('\d+',sPorts))
-        
-        if numPorts < 2 or numPorts > 4:
-            raise ValueError('Please Specify a number of ports between 2 and 4. '
-                             'Currently, {} ports are specified.'.format(str(numPorts)))
-        s = [s2,s3,s4]
-        sParms = s[numPorts-2]
-        filename = '{}.s{}p'.format(testname,str(numPorts))
-        self.pnaSetup(**pnaparms)
+        if len(nums) < 1 or len(nums) > 4:
+            raise ValueError('Please Specify a number of ports between 1 and 4. '
+                             'Currently, {} ports are specified.'.format(str(len(nums))))
+        filename = '{}.s{}p'.format(testname,str(len(nums)))
+        self.pnaSetup(nums, **pnaparms)
         self.checkCal()
-        for s in sParms:
-            measName = 'meas'+s 
-            print(measName)
-    #                    pna.write("DISPlay:WINDow1:STATE ON")
-            pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
-            pna.write('CALCulate1:PARameter:SELect \"{}\"'.format(measName))
-            pna.write("DISPlay:WINDow1:TRACe1:FEED \'{}\'".format(measName)) # duplicate trace number
-            pna.timeout = 450000
-            pna.write("SENSe1:SWEep:MODE SINGle") 
-            pna.query('*OPC?')
-            pna.timeout = 2000
-            pna.write("DISPlay:WINDow1:TRACe1:DELete")                                            
+        
+        for i in nums:
+            for j in nums:
+                s = 'S{}_{}'.format(i,j)
+                sParms.append('S{}_{}'.format(i,j))
+                measName = 'meas'+s 
+                print(measName)
+                pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
+                pna.write("DISPlay:WINDow{}:TRACe{}:FEED \'{}\'".format(i,j,measName))
+        
+        
+#        for s in sParms:
+#            measName = 'meas'+s 
+#            print(measName)
+#            pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
+#            pna.write('CALCulate1:PARameter:SELect \"{}\"'.format(measName))
+#            pna.write("DISPlay:WINDow1:TRACe1:FEED \'{}\'".format(measName)) # duplicate trace number
+        pna.timeout = 450000
+        pna.write("SENSe1:SWEep:MODE SINGle") 
+        pna.query('*OPC?')
+        pna.timeout = 2000
+#            pna.write("DISPlay:WINDow1:TRACe1:DELete")                                            
         print(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\' '.format(sPorts,savedir,filename)) # query unterminated, also need to insert quotes around directory name
         pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\''.format(sPorts,savedir,filename)) #read 16 S parms in SNP format
         pna.query('*OPC?') 

@@ -9,8 +9,10 @@ import visa
 import numpy as np
 
 class Keithley2400:
-    def __init__(self, resource):
+    def __init__(self, resource, label = None, voltages = None):
         rm = visa.ResourceManager()
+        self.label = label
+        self.voltages = voltages
         
         # VisaIOError VI_ERROR_RSRC_NFOUND
         try:
@@ -19,9 +21,11 @@ class Keithley2400:
           print(e.args)
           exit  
     
-    def connect(self):
+    def connect(self, resource, label = None, voltages = None):
 
         rm = visa.ResourceManager()
+        self.label = label
+        self.voltages = voltages
         
         # VisaIOError VI_ERROR_RSRC_NFOUND
         try:
