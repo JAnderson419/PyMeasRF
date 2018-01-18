@@ -62,6 +62,12 @@ class Keithley2400:
 
     def readError(self):
         print(self.visaobj.query('SYSTem:ERRor:NEXT?'))
+        
+    def meas(self,n = 1):
+        self.visaobj.write(':ARM:COUNt 1')
+        self.visaobj.write(':TRIGger:COUNt {}'.format(n))
+        data = self.visaobj.query('READ?')
+        return data
 
     def outputOff(self):
         self.setVoltage(0)
@@ -69,5 +75,6 @@ class Keithley2400:
         
     def disconnect(self):
         self.outputOff()
+        self.visaobj.write(':SYSTem:KEY 23') # return to local
         self.visaobj.close()
         

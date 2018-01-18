@@ -11,7 +11,7 @@ import time
 import AgilentPNAXUtils as pnaUtils
 import Keithley2400 as k2400
 
-def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
+def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None): 
   if smus:  
     for x in smus:
       if x.voltages == None:
@@ -37,9 +37,10 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparm
                   print(str(i) + "/" + str(delay))
           
           pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
-          
-      setVoltageLoop()
+ 
+    setVoltageLoop()
   else:
+    print('here')
     pna.sMeas(sPorts, savedir, localsavedir, testname, pnaparms)
       
   for x in smus: x.outputOff()
@@ -182,9 +183,9 @@ def main():
 #    Vd = [0.8,1.0] # V_DRAIN
 
     smus = [
-          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0]),
-          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [1.0, 4.0]),
-          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
+#          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0]),
+#          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [.2, .4])
+#          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
            ]
 
     compliance = 0.100 #Amps IE 105uA = 0.000105 
