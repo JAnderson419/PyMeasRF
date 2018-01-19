@@ -79,7 +79,26 @@ class AgilentPNAx:
         
         Parameters:
         -----------
-        TODO: rewrite this section
+        ifBandwidth: int
+            IF (receiver) bandwidth. Allowable values include:
+            1,          2,    3,    5,    7,
+            10,   15,   20,   30,   50,   70,
+            100,  150,  200,  300,  500,  700,
+            1k,   1.5k, 2k,   3k,   5k,   7k,
+            10k,  15k,  20k,  30k,  50k,  70k,
+            100k,       200k, 280k, 360k, 600k
+        centerFreq & spanFreq : int
+            frequency range of measurement. Max: 50 GHz. Cannot be used with start/stopFreq.
+        startFreq & stopFreq : int
+            frequency range of measurement. Max: 50 GHz. Cannot be used with center/spanFreq.
+        nPoints : int
+            number of points in measurement (1 to 32,001)
+        avgMode : string
+            Determines type of averaging done by PNA. 
+            POINT : averages at each frequency point before moving on
+            SWEEP : averages the results of n sweeps 
+        nAvg : int
+            number of averages to take
     
         Returns:
         ----------
@@ -142,8 +161,8 @@ class AgilentPNAx:
         pna.write("SENSe1:SWEep:MODE SINGle") 
         pna.query('*OPC?')
         pna.timeout = 2000
-#            pna.write("DISPlay:WINDow1:TRACe1:DELete")                                            
-        print(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\' '.format(sPorts,savedir,filename)) # query unterminated, also need to insert quotes around directory name
+#            pna.write("DISPlay:WINDow1:TRACe1:DELete")    
+        print('Saving snp data on PNA in {}\\{}'.format(savedir,filename)) # query unterminated, also need to insert quotes around directory name
         pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\''.format(sPorts,savedir,filename)) #read 16 S parms in SNP format
         pna.query('*OPC?') 
         self.outputOff()
@@ -162,7 +181,7 @@ class AgilentPNAx:
         if calname == "No Calset Selected":
             raise ValueError('No active calset for the measurement. Aborting')
         else:
-            print(calname)
+            print('Current calibration: {}'.format(calname))
             
     def getCalInfo(self):
         print(self.visaobj.query('SENSe1:CORRection:CSET:ACTivate? NAME'))

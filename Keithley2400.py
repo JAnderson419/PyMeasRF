@@ -62,11 +62,25 @@ class Keithley2400:
 
     def readError(self):
         print(self.visaobj.query('SYSTem:ERRor:NEXT?'))
-        
+    
+    def resetTime(self):
+        self.visaobj.write(':TIME:RESet')
+    
     def meas(self,n = 1):
         self.visaobj.write(':ARM:COUNt 1')
         self.visaobj.write(':TRIGger:COUNt {}'.format(n))
         data = self.visaobj.query('READ?')
+        return data
+    
+    def startMeas(self, n = 1):
+        self.visaobj.write(':ARM:COUNt 1')
+        self.visaobj.write(':TRIGger:COUNt 2500')
+        self.visaobj.write(':TRIGger:DELay {}'.format(n))
+        self.visaobj.write(':INITiate')
+
+    def stopMeas(self):
+        self.visaobj.write(':ABORt')
+        data = self.visaobj.query('FETCh?')
         return data
 
     def outputOff(self):
