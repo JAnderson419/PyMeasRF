@@ -10,12 +10,14 @@ import numpy as np
 import time
 import AgilentPNAXUtils as pnaUtils
 import Keithley2400 as k2400
-import pyplot as plt
+import matplotlib.pyplot as plt
 
 def formatData(data):
     data = data.split(',')
     n = len(data) / 5
-    formatData = [np.zeros(n) for i in range [0,4]]
+    if n != int(n):
+        print('Warning! SMU data doesn\'t have expected number of columns.')
+    formatData = [np.zeros(int(n)) for i in range(0,5)]
     for i,d in enumerate(data): formatData[i % 5][i // 5] = d
     return formatData
         
@@ -28,7 +30,7 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparm
     
     Parameters:
     -----------
-
+    
     smus : list
         A list of the connected SMU objects
     pna
@@ -50,61 +52,64 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparm
     N/A
     '''
     
-  if smus:
-    smuData = []*len(smus)
-    for i,x in enumerate(smus):
-      if x.voltages == None:
-        raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
-      x.visaobj.write(':FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus')
-      x.resetTime()
-      smuData[i] = np.zeros(5)
-    currentV = [None for i in range(0,len(smus))]
-    
-    def setVoltageLoop(l = len(smus)):
-      if l >= 1:
-        for i in smus[l-1].voltages:
-          currentV[l-1] = i
-          setVoltageLoop(l-1)
-        else:
-          print('Setting SMU voltages. ',end='')
-          testname2 = testname
-          for i,v in enumerate(currentV):
-            print('{} {} V'.format(smus[i].label,v), end='  ')
-            smus[i].setVoltage(v)
-            sums[i].startMeas()
-            testname2 = testname2 + '_{}{}V'.format(smus[i].label,str(v).replace('.','_'))
-          print("\nWaiting for {} sec to allow system to equilibriate".format(str(delay)))
-          for i in range(delay):
-              time.sleep(1)
-              if i%10 == 0:
-                  print(str(i) + "/" + str(delay))
+    if smus:
+        smuData = [None]*len(smus)
+        for i,x in enumerate(smus):
+          if x.voltages == None:
+            raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
+          x.visaobj.write(':FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus')
+          x.resetTime()
+          smuData[i] = [np.zeros(1) for i in range(0,5)]
+        currentV = [None for i in range(0,len(smus))]
+        
+        def setVoltageLoop(l = len(smus)):
           
-          pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
-          for i,x in enumerate(smus):
-              data = x.stopMeas()
-              smuData[i] = np.append(smuData[i],formatData(data),2)
- 
-    setVoltageLoop()
-  else:
-    print('here')
-    pna.sMeas(sPorts, savedir, localsavedir, testname, pnaparms)
+            if l >= 1:
+                for i in smus[l-1].voltages:
+                    print('{} {}'.format(smus[l-1].label,i))
+                    currentV[l-1] = i
+                    setVoltageLoop(l-1)
+            else:
+              print('Setting SMU voltages. ',end='')
+              testname2 = testname
+              for i,v in enumerate(currentV):
+                print('{} {} V'.format(smus[i].label,v), end='  ')
+                smus[i].setVoltage(v)
+                smus[i].startMeas()
+                testname2 = testname2 + '_{}{}V'.format(smus[i].label,str(v).replace('.','_'))
+              print("\nWaiting for {} sec to allow system to equilibriate".format(str(delay)))
+              for i in range(delay):
+                  time.sleep(1)
+                  if i%10 == 0:
+                      print(str(i) + "/" + str(delay))
+              
+              pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
+              for i,x in enumerate(smus):
+                  data = x.stopMeas()
+                  smuData[i] = np.append(smuData[i],formatData(data),1)
+     
+        setVoltageLoop()
+    else:
+        pna.sMeas(sPorts, savedir, localsavedir, testname, pnaparms)
+    
+    plt.close('all')      
+    for i,x in enumerate(smus): 
+        x.outputOff()
+        smuData1 = smuData[i][:][:,1:]
+        filename = '{}\\{}_{}.csv'.format(localsavedir,testname,x.label)
+        print('Saving {} data on local PC in {}'.format(x.label,filename))
+        np.savetxt(filename,np.transpose(smuData1),delimiter=',')
       
-  for i,x in enumerate(smus): 
-      x.outputOff()
-      filename = '{}\\{}_{}.csv'.format{localsavedir,testname,x.label}
-      print('Saving {} data on local PC in {}'.format(x.label,filename))
-      np.savetxt(filename,smuData[i],delimiter=',')
-      
-      # plot data
-      fig = plt.figure(i)
-      ax = fig.subaxes(211)
-      ax.plot(smuData[3],smuData[1])
-      ax.set_xlabel('Time (s)')
-      ax.set_ylabel('Current (A)')
-      ax1 = fig.subaxes(211)
-      ax1.plot(smuData[3],smuData[0])
-      ax1.set_xlabel('Time (s)')
-      ax1.set_ylabel('Voltage (V)')
+        # plot data
+        fig = plt.figure(i)
+        fig.suptitle(x.label)
+        ax = fig.add_subplot(211)
+        ax.plot(smuData1[3],smuData1[1],'.',markersize=10)
+        ax.set_ylabel('Current (A)')
+        ax1 = fig.add_subplot(212)
+        ax1.plot(smuData1[3],smuData1[0],'.',markersize=10)
+        ax1.set_xlabel('Time (s)')
+        ax1.set_ylabel('Voltage (V)')
     
 def sParmMeas3(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
     '''
@@ -245,14 +250,14 @@ def main():
 
     smus = [
 #          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0]),
-#          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [.2, .4])
+          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [.2, .4])
 #          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
            ]
 
     compliance = 0.100 #Amps IE 105uA = 0.000105 
     maxVoltage = 100 #Maximum expected voltage to be used 
     ports = '1,2' # string containing comma separated port numbers to be used
-    delayTime = 10 #Time between setting SMU voltage and measurement in seconds
+    delayTime = 2 #Time between setting SMU voltage and measurement in seconds
     
 
     testname = 'Test2' # name snp files will be saved as current file name format is as follows:
@@ -260,6 +265,7 @@ def main():
     #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
     #load_Vg1_0Vd2_0Vg3_0.s2p
     savedir = 'C:\\Documents\\pyvisa' # Directory where snp files will be saved on PNA
+    localsavedir = r'C:\Users\hybrid\Desktop\PythonData' # Directory where SMU data will be saved
     ############################# END User specified test Parameters ###############################################
     ################################################################################################################
     ################################################################################################################
@@ -275,7 +281,6 @@ def main():
 #                    'nAvg' : 1
                     }
 #    pnaTestParms=None
-    localsavedir = 'C:\\Test' # Does nothing currently
 #    voltages = [Vg,Vd,Vdr]
 #    voltages = [Vd]
     

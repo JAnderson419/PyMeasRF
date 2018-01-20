@@ -138,7 +138,10 @@ class AgilentPNAx:
             raise ValueError('Please Specify a number of ports between 1 and 4. '
                              'Currently, {} ports are specified.'.format(str(len(nums))))
         filename = '{}.s{}p'.format(testname,str(len(nums)))
-        self.pnaSetup(nums, **pnaparms)
+        if pnaparms:
+            self.pnaSetup(nums, **pnaparms)
+        else:
+            self.pnaSetup(nums)
         self.checkCal()
         
         for i in nums:

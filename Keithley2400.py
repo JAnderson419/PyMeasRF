@@ -54,17 +54,20 @@ class Keithley2400:
         if comp: # set compliance if given. Default for 2400 is 105uA, 21V
 #            self.visaobj.write(':SENSe:VOLTage:RANGe ' + str(voltRange))
             self.visaobj.write(':SENSe:CURRent:PROTection:LEVel ' + str(comp))
+        self.visaobj.write('SOURce:FUNCtion:MODE VOLTage')
+        self.visaobj.write('SOURce:VOLTage:LEVel 0')
 
     def setVoltage(self,voltage):
         self.visaobj.write('SOURce:VOLTage:LEVel {}'.format(str(voltage)))
         self.visaobj.write(':CONFigure:VOLTage:DC')
         self.visaobj.query('*OPC?')
+        self.visaobj.write(':SENSe:FUNCtion:ON "CURRent"')
 
     def readError(self):
         print(self.visaobj.query('SYSTem:ERRor:NEXT?'))
     
     def resetTime(self):
-        self.visaobj.write(':TIME:RESet')
+        self.visaobj.write(':SYSTem:TIME:RESet')
     
     def meas(self,n = 1):
         self.visaobj.write(':ARM:COUNt 1')
