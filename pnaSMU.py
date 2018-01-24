@@ -22,9 +22,17 @@ def formatData(data):
     return formatData
         
 
-def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None): 
+def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, pnaparms = None): 
     '''
-    PNA measurement with up to three SMU voltage sweeps
+    PNA s-parameter measurement with arbitrary number of nested smu voltage steps.
+    
+    Handles any number of SMUs by recursively iterating through objects. 
+    Voltages are entered from the SMU voltage lists into a temporary currentV list, with all SMU voltages being set simultaneously.
+    A pause then occurs for the delay period specified with sMeas being called at the conclusion. 
+    Data is fetched from the SMUs after each sMeas() and appended to the SMU data array.
+    
+    SMU data is plotted and saved in localsavedir. 
+    PNA data saved in savedir on PNA.
     
     TODO: Implement base class for measurements.
     
@@ -32,18 +40,21 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparm
     -----------
     
     smus : list
-        A list of the connected SMU objects
-    pna
-        The connected PNA
+        A list of the connected SMU objects with voltages to be iterated through.
+        If no SMUs are specified in the list, the function simply calls pna.sMeas().
+    pna : AgilentPNAx
+        The connected PNA.
     sPorts : string
-        The ports to be used in S-parameter measurement
+        The ports to be used in S-parameter measurement.
     savedir : string
         The directory on the PNA in which to save snp files.
     localsavedir : string    
         The local directory where SMU data will be saved.
     testname : string
+        Identifier for the test that will be used in saved filenames.
     delay: int
-        The delay (in seconds) between SMU setting and PNA sweep.
+        The delay (in seconds) between SMU setting and PNA sweep. 
+        Defaults to 0.
     pnaparms : dict
         A dictionary containing test parameters to set on the pna.
         
@@ -111,107 +122,6 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparm
         ax1.set_xlabel('Time (s)')
         ax1.set_ylabel('Voltage (V)')
     
-def sParmMeas3(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
-    '''
-    PNA measurement with up to three SMU voltage sweeps
-    
-    TODO: Implement base class for measurements.
-    
-    Parameters:
-    -----------
-    voltages : list
-        A list containing the three voltage values/sweeps for the SMUs
-    smus : list
-        A list of the connected SMUs
-    pna
-        The connected PNA
-    sParms : list
-        The S-parameters to be measured
-    savedir : string
-        The directory on the PNA in which to save snp files.
-    testname : string
-    pnaparms : dict
-        A dictionary containing test parameters to set on the pna.
-        
-    Returns:
-    ----------
-    N/A
-    
-    '''
-   
-    # explicitly redefine smus as local vars for readability 
-    gate = smus[0]
-    drain = smus[1]
-    drive = smus[2]
-    for x in smus: x.setVoltage(0)
-    
-    for vg in voltages[0]:
-        for vd in voltages[1]:
-            for vdr in voltages[2]:
-                gate.setVoltage(vg)
-                drain.setVoltage(vd)
-                drive.setVoltage(vdr)                
-
-                print("SMU Voltages set to the following - Gate: " + str(vg) + " Drain: " + str(vd) + " Drive: " + str(vdr))
-                print("Now Sleeping for {} sec to allow system to equilibriate".format(str(delay)))
-                for i in range(delay):
-                    time.sleep(1)
-                    if i%10 == 0:
-                        print(str(i) + "/" + str(delay))
-
-                testname2 = '{}_Vg{}Vd{}Vdr{}'.format(testname,str(vg).replace('.','_'),str(vd).replace('.','_'),str(vdr).replace('.','_'))
-                pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
-    for x in smus: x.outputOff
-    
-def sParmMeas1(voltages, smus, pna, sPorts, savedir, localsavedir, testname, delay, pnaparms = None):
-    '''
-    PNA measurement with one SMU voltage sweep.
-    
-    TODO: Implement base class for measurements.
-    
-    Parameters:
-    -----------
-    voltages : list
-        A list containing the three voltage values/sweeps for the SMUs
-    smus : list
-        A list of the connected SMUs
-    pna
-        The connected PNA
-    sParms : list
-        The S-parameters to be measured
-    savedir : string
-        The directory on the PNA in which to save snp files.
-    testname : string
-    pnaparms : dict
-        A dictionary containing test parameters to set on the pna.
-        
-    Returns:
-    ----------
-    N/A
-    
-    '''
-   
-    # explicitly redefine smus as local vars for readability 
-    gate = smus[0]
-
-    for x in smus: x.setVoltage(0)
-        
-    for vg in voltages[0]:
-        gate.setVoltage(vg)
-        
-
-        print("SMU Voltages set to the following - Gate: " + str(vg))
-        print("Now Sleeping for {} sec to allow system to equilibriate".format(str(delay)))
-        for i in range(delay):
-            time.sleep(1)
-            if i%10 == 0:
-                print(str(i) + "/" + str(delay))
-
-        testname2 = '{}_Vg{}'.format(testname,str(vg).replace('.','_'))
-        pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
-    for x in smus: x.outputOff
-
-    
 def main():
     '''
     Carry out PNA S-parameter measurements with varying DC biases.
@@ -244,9 +154,6 @@ def main():
     ################################################################################################################
     ################################################################################################################
     ################################################################################################################
-#    Vdr = [1.0, 4.0] # V_DRIVE
-#    Vg = [2.0] # V_GATE
-#    Vd = [0.8,1.0] # V_DRAIN
 
     smus = [
 #          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0]),
@@ -258,7 +165,6 @@ def main():
     maxVoltage = 100 #Maximum expected voltage to be used 
     ports = '1,2' # string containing comma separated port numbers to be used
     delayTime = 2 #Time between setting SMU voltage and measurement in seconds
-    
 
     testname = 'Test2' # name snp files will be saved as current file name format is as follows:
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'
@@ -280,18 +186,7 @@ def main():
 #                    'avgMode' : 'SWEEP', # POINT or SWEEP
 #                    'nAvg' : 1
                     }
-#    pnaTestParms=None
-#    voltages = [Vg,Vd,Vdr]
-#    voltages = [Vd]
-    
-#    pna = pnaUtils.AgilentPNAx('TCPIP0::192.168.1.1::inst0::INSTR')
-#    gate = k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0])
-#    drain = k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [1.0, 4.0])
-#    drive = k2400.Keithley2400('GPIB1::26::INSTR', label = drive, voltages = [0])
-    
-#    smus = [gate,drain,drive]
-#    smus = [drain]
-    
+
     for x in smus: x.smuSetup(maxVoltage, compliance)
     pna.pnaInitSetup()
     try:

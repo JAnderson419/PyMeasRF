@@ -11,14 +11,18 @@ import re as re
 
 class AgilentPNAx:
     def __init__(self, resource):
-        rm = visa.ResourceManager()
+        '''
+        Create a new PNAx instance.
         
-        # VisaIOError VI_ERROR_RSRC_NFOUND
-        try:
-          self.visaobj = rm.open_resource(resource)
-        except visa.VisaIOError as e:
-          print(e.args)
-          exit
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
+        '''
+        self.connect(resource)
     
     
     def connect(self, resource):
@@ -27,14 +31,12 @@ class AgilentPNAx:
         
         Parameters:
         -----------
-        N/A
+        resource : str
+            A string containing the VISA address of the device.
         
         Returns:
         ----------
-        smus : list
-            A list of the connected SMUs
-        pna
-            The connected PNA
+        N/A
         '''
         rm = visa.ResourceManager()
         
@@ -46,6 +48,19 @@ class AgilentPNAx:
           exit
 
     def pnaInitSetup(self):
+        '''
+        Perform initial setup of the PNA after connecting.
+        
+        Deletes old parameters, puts trigger on hold, and turns display on.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
+        '''
         pna = self.visaobj
     #    pna.write("SYST:FPReset") # reset, delete measurements, traces, & windows
     #    pna.write('*CLS')
@@ -57,6 +72,18 @@ class AgilentPNAx:
        
 
     def clearWindow(self,winNum):
+        '''
+        Deletes all traces in the windows with the given number.
+        
+        Parameters:
+        -----------
+        winNum : int
+            Number of window to clear.
+        
+        Returns:
+        ----------
+        N/A
+        '''
         traces = self.visaobj.query('DISPlay:WINDow{}:CATalog?'.format(winNum))
         if re.search("EMPTY",traces):
             next
@@ -66,6 +93,17 @@ class AgilentPNAx:
                 self.visaobj.write("DISPlay:WINDow{}:{}:DELete".format(winNum,trace)) 
             
     def disconnect(self):
+        '''
+        Turns output off and disconnects from PNA.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
+        '''
         self.outputOff()
 #        self.clearWindows()
         self.visaobj.close()
@@ -129,6 +167,31 @@ class AgilentPNAx:
 
         
     def sMeas(self, sPorts, savedir, localsavedir, testname, pnaparms = None):
+        '''
+        Perform and save an s-parameter measurement.
+        
+        Parameters:
+        -----------
+        sPorts : string
+            Comma seperated list of ports to be used in S-parameter measurement.
+        savedir : string
+            The directory on the PNA in which to save snp files.
+        localsavedir : string    
+            The local directory where SMU data will be saved.
+        testname : string
+            Identifier for the test that will be used in saved filenames.
+        pnaparms : dict
+            A dictionary containing test parameters to set on the pna.
+            
+        Returns:
+        ----------
+        N/A
+        
+        Raises
+        ------
+        ValueError
+            Number of ports doesn't match physically available port numbers.
+        '''
         pna = self.visaobj
         
         sParms = []
@@ -171,6 +234,17 @@ class AgilentPNAx:
         self.outputOff()
 
     def outputOff(self):
+        '''
+        Turns PNA output off by putting trigger in hold.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
+        '''
         self.visaobj.write('SENSe1:SWEep:MODE HOLD') 
 
 
@@ -180,6 +254,22 @@ class AgilentPNAx:
     ##########################
     
     def checkCal(self):
+        '''
+        Fetches active calibration set and prints the name, throwing an error if none is selected.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
+        
+        Raises
+        ------
+        ValueError
+            No active calset.
+        '''
         calname = self.visaobj.query('SENSe1:CORRection:CSET:ACTivate? NAME')
         if calname == "No Calset Selected":
             raise ValueError('No active calset for the measurement. Aborting')
@@ -187,8 +277,30 @@ class AgilentPNAx:
             print('Current calibration: {}'.format(calname))
             
     def getCalInfo(self):
+        '''
+        Prints active calibration set as well as all cal sets present on PNA.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
+        '''
         print(self.visaobj.query('SENSe1:CORRection:CSET:ACTivate? NAME'))
         print(self.visaobj.query('SENSe1:CORRection:CSET:TYPE:CATalog? NAME'))
         
     def getAvailCals(self):
+        '''
+        Prints all available cal sets present on PNA.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
+        '''
         print(self.visaobj.query('CSET:CATalog?'))
