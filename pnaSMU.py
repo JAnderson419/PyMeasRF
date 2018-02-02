@@ -22,7 +22,7 @@ def formatData(data):
     return formatData
         
 
-def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, pnaparms = None): 
+def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, postMeasDelay = 0, smuMeasInter = 1 pnaparms = None): 
     '''
     PNA s-parameter measurement with arbitrary number of nested smu voltage steps.
     
@@ -52,9 +52,14 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, pna
         The local directory where SMU data will be saved.
     testname : string
         Identifier for the test that will be used in saved filenames.
-    delay: int
+    delay : int
         The delay (in seconds) between SMU setting and PNA sweep. 
         Defaults to 0.
+    postMeasDelay : int
+        The delay (in seconds) that the SMU waits at 0 V after sMeas and before the next bias condition.
+    smuMeasInter : int
+        The time interval (in seconds) between SMU measurements.
+        Values from 0 to 999 accepted.
     pnaparms : dict
         A dictionary containing test parameters to set on the pna.
         
@@ -86,7 +91,7 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, pna
               for i,v in enumerate(currentV):
                 print('{} {} V'.format(smus[i].label,v), end='  ')
                 smus[i].setVoltage(v)
-                smus[i].startMeas()
+                smus[i].startMeas(tmeas = smuMeasInter)
                 testname2 = testname2 + '_{}{}V'.format(smus[i].label,str(v).replace('.','_'))
               print("\nWaiting for {} sec to allow system to equilibriate".format(str(delay)))
               for i in range(delay):
@@ -96,8 +101,17 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, pna
               
               pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
               for i,x in enumerate(smus):
+                  x.visaobj.timeout = 120000
                   data = x.stopMeas()
+                  x.visaobj.timeout = 2000
                   smuData[i] = np.append(smuData[i],formatData(data),1)
+                  if postMeasDelay: x.setVoltage(0)
+                  
+              for i in range(postMeasDelay):
+                  time.sleep(1)
+                  if i%10 == 0:
+                      print(str(i) + "/" + str(postMeasDelay))
+              
      
         setVoltageLoop()
     else:

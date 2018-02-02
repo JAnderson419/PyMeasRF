@@ -11,31 +11,27 @@ import numpy as np
 class Keithley2400:
     def __init__(self, resource, label = None, voltages = None):
         '''
-        Connect to the PNA. 
+        Creates a new Keithley 2400 SMU instance and attempts connection. 
         
         Parameters:
         -----------
         resource : str
             A string containing the VISA address of the device.
+        label : str
+            The name of the SMU that will be used to label data uniquely.
+        voltages : list or array-like
+            A list of voltages the user would like forced. 
+            Used for stepping through voltage settings during measurements.
         
         Returns:
         ----------
         N/A
         '''
-        rm = visa.ResourceManager()
-        self.label = label
-        self.voltages = voltages
-        
-        # VisaIOError VI_ERROR_RSRC_NFOUND
-        try:
-          self.visaobj = rm.open_resource(resource)
-        except visa.VisaIOError as e:
-          print(e.args)
-          exit  
+        self.connect(resource, label, voltages) 
     
     def connect(self, resource, label = None, voltages = None):
         '''
-        Connect to the PNA. 
+        Connect to the Keithley 2400 SMU. 
         
         Parameters:
         -----------
@@ -156,7 +152,7 @@ class Keithley2400:
         data = self.visaobj.query('READ?')
         return data
     
-    def startMeas(self, n = 2500):
+    def startMeas(self, n = 2500, tmeas = 1):
         '''
         Initiates an ongoing measurement on the SMU. 
         
@@ -167,6 +163,8 @@ class Keithley2400:
         n : int
             The number of measurements to instruct the device to take.
             1 to 2500
+        tmeas : int
+            The time (in seconds) between measurement operations
         
         Returns:
         ----------
@@ -174,7 +172,7 @@ class Keithley2400:
         '''
         self.visaobj.write(':ARM:COUNt 1')
         self.visaobj.write(':TRIGger:COUNt {}'.format(n))
-        self.visaobj.write(':TRIGger:DELay 0')
+        self.visaobj.write(':TRIGger:DELay {}'.format(tmeas))
         self.visaobj.write(':INITiate')
 
     def stopMeas(self):

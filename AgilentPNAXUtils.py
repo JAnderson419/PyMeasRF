@@ -16,7 +16,8 @@ class AgilentPNAx:
         
         Parameters:
         -----------
-        N/A
+        resource : str
+            A string containing the VISA address of the device.
         
         Returns:
         ----------
@@ -226,11 +227,11 @@ class AgilentPNAx:
         pna.timeout = 450000
         pna.write("SENSe1:SWEep:MODE SINGle") 
         pna.query('*OPC?')
-        pna.timeout = 2000
 #            pna.write("DISPlay:WINDow1:TRACe1:DELete")    
         print('Saving snp data on PNA in {}\\{}'.format(savedir,filename)) # query unterminated, also need to insert quotes around directory name
         pna.write(':CALCulate1:DATA:SNP:PORTs:SAVE \'{}\',\'{}\\{}\''.format(sPorts,savedir,filename)) #read 16 S parms in SNP format
         pna.query('*OPC?') 
+        pna.timeout = 2000
         self.outputOff()
 
     def outputOff(self):
