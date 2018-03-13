@@ -19,7 +19,7 @@ class Agilent33220a:
     
     def __init__(self, resource, label = None):
         '''
-        Creates a new Keithley 2400 SMU instance and attempts connection. 
+        Creates a new instrument instance and attempts connection. 
         
         Parameters:
         -----------
@@ -36,7 +36,7 @@ class Agilent33220a:
     
     def connect(self, resource, label = None):
         '''
-        Connect to the Keithley 2400 SMU. 
+        Connect to the instrument. 
         
         Parameters:
         -----------
@@ -149,6 +149,14 @@ class Agilent33220a:
     def trigger(self):
         '''
         Asserts a trigger over the software bus.
+        
+        Parameters:
+        -----------
+        N/A
+        
+        Returns:
+        ----------
+        N/A
         '''
         self.visaobj.assert_trigger()
           
