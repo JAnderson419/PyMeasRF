@@ -56,19 +56,27 @@ class AgilentN9030A:
           print(e.args)
           exit
 
-    def read(self):
+    def read(self, mode):
         '''
-        Asserts a trigger over the software bus.
+        Takes a measurement using current instrument measurement settings.
+
         
         Parameters:
         -----------
-        N/A
+        mode : string
+            The instrument mode you wish to take a measurement in. 
+            Possible modes include, but no limited to:
+                
+                SAN : Signal analyzer 
         
         Returns:
         ----------
-        N/A
+        data : str
+            The measured data.
         '''
-        data = self.visaobj.query(':READ:')
+        self.visaobj.timeout = 60000 # set timeout to 60s for measurement
+        data = self.visaobj.query(':READ:{}?'.format(mode))
+        self.visaobj.timeout = 2000 # set timeout back to 2s
         return data  
         
     def disconnect(self):
