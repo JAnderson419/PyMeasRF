@@ -12,17 +12,48 @@ import AgilentPNAXUtils as pnaUtils
 import Keithley2400 as k2400
 import matplotlib.pyplot as plt
 
-def formatData(data):
-    data = data.split(',')
-    n = len(data) / 5
-    if n != int(n):
-        print('Warning! SMU data doesn\'t have expected number of columns.')
-    formatData = [np.zeros(int(n)) for i in range(0,5)]
-    for i,d in enumerate(data): formatData[i % 5][i // 5] = d
-    return formatData
+class pnaSMUmeas():
+    '''
+    Base class for measurements involving a PNA and Keithley SMUs.
+    
+    smus : list
+        A list of the connected SMU objects with voltages to be iterated through.
+        If no SMUs are specified in the list, the function simply calls pna.sMeas().
+    pna : AgilentPNAx
+        The connected PNA.
+    sPorts : string
+        The ports to be used in S-parameter measurement.
+    savedir : string
+        The directory on the PNA in which to save snp files.
+    localsavedir : string    
+        The local directory where SMU data will be saved.
+    testname : string
+        Identifier for the test that will be used in saved filenames.
+    '''
+    
+    
+    def __init__(self, smus, pna, sPorts, savedir, localsavedir, testname):
         
-
-def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, postMeasDelay = 0, smuMeasInter = 1 pnaparms = None): 
+        
+        self.smus = smus
+        self.pna = pna
+        self.sPorts = sPorts
+        self.savedir = savedir
+        self.localsavedir = localsavedir
+        self.testname = testname
+        
+    
+    def formatData(data):
+        data = data.split(',')
+        n = len(data) / 5
+        if n != int(n):
+            print('Warning! SMU data doesn\'t have expected number of columns.')
+        formatData = [np.zeros(int(n)) for i in range(0,5)]
+        for i,d in enumerate(data): formatData[i % 5][i // 5] = d
+        return formatData
+           
+    
+class sParmMeas(pnaSMUmeas): 
     '''
     PNA s-parameter measurement with arbitrary number of nested smu voltage steps.
     
@@ -67,75 +98,124 @@ def sParmMeas(smus, pna, sPorts, savedir, localsavedir, testname, delay = 0, pos
     ----------
     N/A
     '''
-    
-    if smus:
-        smuData = [None]*len(smus)
-        for i,x in enumerate(smus):
-          if x.voltages == None:
-            raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
-          x.visaobj.write(':FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus')
-          x.resetTime()
-          smuData[i] = [np.zeros(1) for i in range(0,5)]
-        currentV = [None for i in range(0,len(smus))]
+    def __init__(self, smus, pna, sPorts, savedir, localsavedir, testname, delay = 0,
+                  postMeasDelay = 0, smuMeasInter = 1, pnaparms = None):      
+        pnaSMUmeas.__init__(self,smus,pna,sPorts,savedir,localsavedir,testname)
+        self.delay = delay
+        self.postMeasDelay = postMeasDelay
+        self.smuMeasInter = smuMeasInter
+        self.pnaparms = pnaparms
         
-        def setVoltageLoop(l = len(smus)):
-          
-            if l >= 1:
-                for i in smus[l-1].voltages:
-                    print('{} {}'.format(smus[l-1].label,i))
-                    currentV[l-1] = i
-                    setVoltageLoop(l-1)
-            else:
-              print('Setting SMU voltages. ',end='')
-              testname2 = testname
-              for i,v in enumerate(currentV):
-                print('{} {} V'.format(smus[i].label,v), end='  ')
-                smus[i].setVoltage(v)
-                smus[i].startMeas(tmeas = smuMeasInter)
-                testname2 = testname2 + '_{}{}V'.format(smus[i].label,str(v).replace('.','_'))
-              print("\nWaiting for {} sec to allow system to equilibriate".format(str(delay)))
-              for i in range(delay):
-                  time.sleep(1)
-                  if i%10 == 0:
-                      print(str(i) + "/" + str(delay))
+        
+    def measure(self):
+        
+        if self.smus:
+            smuData = [None]*len(self.smus)
+            for i,x in enumerate(self.smus):
+              if x.voltages == None:
+                raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
+              x.visaobj.write(':FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus')
+              x.resetTime()
+              smuData[i] = [np.zeros(1) for i in range(0,5)]
+            currentV = [None for i in range(0,len(self.smus))]
+            
+            def setVoltageLoop(l = len(self.smus)):
               
-              pna.sMeas(sPorts, savedir, localsavedir, testname2, pnaparms)
-              for i,x in enumerate(smus):
-                  x.visaobj.timeout = 120000
-                  data = x.stopMeas()
-                  x.visaobj.timeout = 2000
-                  smuData[i] = np.append(smuData[i],formatData(data),1)
-                  if postMeasDelay: x.setVoltage(0)
+                if l >= 1:
+                    for i in self.smus[l-1].voltages:
+                        print('{} {}'.format(self.smus[l-1].label,i))
+                        currentV[l-1] = i
+                        setVoltageLoop(l-1)
+                else:
+                  print('Setting SMU voltages. ',end='')
+                  testname2 = self.testname
+                  for i,v in enumerate(currentV):
+                    print('{} {} V'.format(self.smus[i].label,v), end='  ')
+                    self.smus[i].setVoltage(v)
+                    self.smus[i].startMeas(tmeas = self.smuMeasInter)
+                    testname2 = testname2 + '_{}{}V'.format(self.smus[i].label,str(v).replace('.','_'))
+                  print("\nWaiting for {} sec to allow system to equilibriate".format(str(self.delay)))
+                  for i in range(self.delay):
+                      time.sleep(1)
+                      if i%10 == 0:
+                          print(str(i) + "/" + str(self.delay))
                   
-              for i in range(postMeasDelay):
-                  time.sleep(1)
-                  if i%10 == 0:
-                      print(str(i) + "/" + str(postMeasDelay))
-              
-     
-        setVoltageLoop()
-    else:
-        pna.sMeas(sPorts, savedir, localsavedir, testname, pnaparms)
-    
-    plt.close('all')      
-    for i,x in enumerate(smus): 
-        x.outputOff()
-        smuData1 = smuData[i][:][:,1:]
-        filename = '{}\\{}_{}.csv'.format(localsavedir,testname,x.label)
-        print('Saving {} data on local PC in {}'.format(x.label,filename))
-        np.savetxt(filename,np.transpose(smuData1),delimiter=',')
-      
-        # plot data
-        fig = plt.figure(i)
-        fig.suptitle(x.label)
-        ax = fig.add_subplot(211)
-        ax.plot(smuData1[3],smuData1[1],'.',markersize=10)
-        ax.set_ylabel('Current (A)')
-        ax1 = fig.add_subplot(212)
-        ax1.plot(smuData1[3],smuData1[0],'.',markersize=10)
-        ax1.set_xlabel('Time (s)')
-        ax1.set_ylabel('Voltage (V)')
-    
+                  self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, testname2, self.pnaparms)
+                  for i,x in enumerate(self.smus):
+                      x.visaobj.timeout = 120000
+                      data = x.stopMeas()
+                      x.visaobj.timeout = 2000
+                      smuData[i] = np.append(smuData[i],formatData(data),1)
+                      if self.postMeasDelay: x.setVoltage(0)
+                      
+                  for i in range(self.postMeasDelay):
+                      time.sleep(1)
+                      if i%10 == 0:
+                          print(str(i) + "/" + str(self.postMeasDelay))
+                  
+         
+            setVoltageLoop()
+        else:
+            self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, self.testname, self.pnaparms)
+        
+        plt.close('all')      
+        for i,x in enumerate(self.smus): 
+            x.outputOff()
+            smuData1 = smuData[i][:][:,1:]
+            filename = '{}\\{}_{}.csv'.format(self.localsavedir,self.testname,x.label)
+            print('Saving {} data on local PC in {}'.format(x.label,filename))
+            np.savetxt(filename,np.transpose(smuData1),delimiter=',')
+          
+            # plot data
+            fig = plt.figure(i)
+            fig.suptitle(x.label)
+            ax = fig.add_subplot(211)
+            ax.plot(smuData1[3],smuData1[1],'.',markersize=10)
+            ax.set_ylabel('Current (A)')
+            ax1 = fig.add_subplot(212)
+            ax1.plot(smuData1[3],smuData1[0],'.',markersize=10)
+            ax1.set_xlabel('Time (s)')
+            ax1.set_ylabel('Voltage (V)')
+            
+    def timeIntervalMeasure(self, measTimeInterval, numIntervals):
+        '''
+        Carries out s-Parameter measurements (with arbitrary number of SMU bias
+        points) at a set time interval.
+        
+        Parameters
+        -----------
+        
+        measTimeInterval : int
+            Number of seconds between triggering of an sParmMeas cycle.
+            
+        numIntervals : int
+            Number of times to repeat the measurement.
+            
+        Returns
+        -----------
+        N/A
+        '''
+        meashr = measTimeInterval // 3600
+        measmin = (measTimeInterval % 3600) // 60
+        meassec = (measTimeInterval % 3600) % 60
+        
+        totalTime = numIntervals*measTimeInterval
+        totalhr = totalTime // 3600
+        totalmin = (totalTime % 3600) // 60
+        totalsec = (totalTime % 3600) % 60
+        
+        endTime = time.localtime(time.time()+totalTime)
+        print('Starting time: {}.'.format(time.asctime()))
+        print('Performing {} measurements over {} hours, {} minutes, and {} seconds.'.format(numIntervals,totalhr,totalmin,totalsec))
+        print('Estimated completion after: {}.'.format(time.asctime(endTime)))
+        for i in range(0,numIntervals):
+            print('Starting measurement {}: {}.'.format(i,time.asctime()))
+            self.measure()
+            print('Measurement {} complete: {}.'.format(i,time.asctime()))
+            print('Waiting for {} hours, {} minutes, and {} seconds.'.format(meashr,measmin,meassec))
+            for j in range(measTimeInterval):
+               time.sleep(1)
+        
 def main():
     '''
     Carry out PNA S-parameter measurements with varying DC biases.
@@ -203,8 +283,9 @@ def main():
 
     for x in smus: x.smuSetup(maxVoltage, compliance)
     pna.pnaInitSetup()
+    meas = sParmMeas(smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     try:
-      sParmMeas(smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
+      meas.measure()
     except visa.VisaIOError as e:
         print(e.args)
         pna.outputOff   
