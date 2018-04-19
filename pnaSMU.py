@@ -12,7 +12,7 @@ import AgilentPNAXUtils as pnaUtils
 import Keithley2400 as k2400
 import matplotlib.pyplot as plt
 
-class pnaSMUmeas():
+class PNAsmuMeas():
     '''
     Base class for measurements involving a PNA and Keithley SMUs.
     
@@ -53,7 +53,7 @@ class pnaSMUmeas():
         return formatData
            
     
-class sParmMeas(pnaSMUmeas): 
+class SParmMeas(PNAsmuMeas): 
     '''
     PNA s-parameter measurement with arbitrary number of nested smu voltage steps.
     
@@ -100,7 +100,7 @@ class sParmMeas(pnaSMUmeas):
     '''
     def __init__(self, smus, pna, sPorts, savedir, localsavedir, testname, delay = 0,
                   postMeasDelay = 0, smuMeasInter = 1, pnaparms = None):      
-        pnaSMUmeas.__init__(self,smus,pna,sPorts,savedir,localsavedir,testname)
+        PNAsmuMeas.__init__(self,smus,pna,sPorts,savedir,localsavedir,testname)
         self.delay = delay
         self.postMeasDelay = postMeasDelay
         self.smuMeasInter = smuMeasInter
@@ -145,7 +145,7 @@ class sParmMeas(pnaSMUmeas):
                       x.visaobj.timeout = 120000
                       data = x.stopMeas()
                       x.visaobj.timeout = 2000
-                      smuData[i] = np.append(smuData[i],formatData(data),1)
+                      smuData[i] = np.append(smuData[i],self.formatData(data),1)
                       if self.postMeasDelay: x.setVoltage(0)
                       
                   for i in range(self.postMeasDelay):
@@ -195,6 +195,7 @@ class sParmMeas(pnaSMUmeas):
         -----------
         N/A
         '''
+        testname = self.testname # record starting testname
         meashr = measTimeInterval // 3600
         measmin = (measTimeInterval % 3600) // 60
         meassec = (measTimeInterval % 3600) % 60
@@ -209,12 +210,14 @@ class sParmMeas(pnaSMUmeas):
         print('Performing {} measurements over {} hours, {} minutes, and {} seconds.'.format(numIntervals,totalhr,totalmin,totalsec))
         print('Estimated completion after: {}.'.format(time.asctime(endTime)))
         for i in range(0,numIntervals):
-            print('Starting measurement {}: {}.'.format(i,time.asctime()))
+            print('Starting measurement {}: {}.'.format(i+1,time.asctime()))
+            self.testname = '{}_{}_{}'.format(i+1,time.strftime('%d_%b_%Y_%H:%M:%S'),testname)
             self.measure()
-            print('Measurement {} complete: {}.'.format(i,time.asctime()))
+            print('Measurement {} complete: {}.'.format(i+1,time.asctime()))
             print('Waiting for {} hours, {} minutes, and {} seconds.'.format(meashr,measmin,meassec))
             for j in range(measTimeInterval):
                time.sleep(1)
+        self.testname = testname # return testname to original value
         
 def main():
     '''
@@ -283,7 +286,7 @@ def main():
 
     for x in smus: x.smuSetup(maxVoltage, compliance)
     pna.pnaInitSetup()
-    meas = sParmMeas(smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
+    meas = SParmMeas(smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     try:
       meas.measure()
     except visa.VisaIOError as e:
