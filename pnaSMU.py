@@ -112,7 +112,7 @@ class SParmMeas(PNAsmuMeas):
         if self.smus:
             smuData = [None]*len(self.smus)
             for i,x in enumerate(self.smus):
-              if x.voltages == None:
+              if x.voltages.all() == None:
                 raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
               x.visaobj.write(':FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus')
               x.resetTime()

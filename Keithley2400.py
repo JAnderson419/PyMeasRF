@@ -48,7 +48,7 @@ class Keithley2400:
         '''
         rm = visa.ResourceManager()
         self.label = label
-        self.voltages = voltages
+        self.voltages = np.asarray(voltages)
         
         # VisaIOError VI_ERROR_RSRC_NFOUND
         try:
