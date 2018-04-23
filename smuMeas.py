@@ -5,10 +5,22 @@ ander906@purdue.edu
 HybridMEMS
 """
 
+import visa
 import numpy as np
-import pyplot as plt
 import time
-
+import AgilentPNAXUtils as pnaUtils
+import Keithley2400 as k2400
+import matplotlib.pyplot as plt
+    
+def formatData(data):
+    data = data.split(',')
+    n = len(data) / 5
+    if n != int(n):
+        print('Warning! SMU data doesn\'t have expected number of columns.')
+    formatData = [np.zeros(int(n)) for i in range(0,5)]
+    for i,d in enumerate(data): formatData[i % 5][i // 5] = d
+    return formatData
+    
 class SMUmeas():
     '''
     Class for handling measurements made with multiple SMUs.
@@ -89,12 +101,12 @@ class SMUmeas():
                   x.visaobj.timeout = 120000
                   data = x.meas()
                   x.visaobj.timeout = 2000
-                  smuData[i] = np.append(smuData[i],self.formatData(data),1)
+                  smuData[i] = np.append(smuData[i],formatData(data),1)
               
         setVoltageLoop()
         plt.close('all')  
-        if smuX and smuY:
-            fig = plt.figure(0)
+        if (smuX != None and smuY != None):
+            fig = plt.figure(1)
             ax = fig.add_subplot(111)
             ax.plot(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1])
             ax.set_xlabel('{} Voltage (V)'.format(self.smus[smuX].label))
@@ -107,7 +119,7 @@ class SMUmeas():
             np.savetxt(filename,np.transpose(smuData1),delimiter=',')
           
             # plot data
-            fig = plt.figure(i+1)
+            fig = plt.figure(i+2)
             fig.suptitle(x.label)
             ax = fig.add_subplot(211)
             ax.plot(smuData1[3],smuData1[1],'.',markersize=10)
@@ -116,3 +128,28 @@ class SMUmeas():
             ax1.plot(smuData1[3],smuData1[0],'.',markersize=10)
             ax1.set_xlabel('Time (s)')
             ax1.set_ylabel('Voltage (V)')
+            
+def main():
+    smus = [
+          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [5,10,15,20,25]),
+          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [.5])
+#          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
+           ]
+
+    compliance = 0.100 #Amps IE 105uA = 0.000105 
+    maxVoltage = 100 #Maximum expected voltage to be used 
+    delayTime = 2 #Time between setting SMU voltage and measurement in seconds
+
+    testname = 'Test2' # name snp files will be saved as current file name format is as follows:
+    #'testname_VgX_XVdY_YVdrZ_Z.sXp'
+    #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
+    #load_Vg1_0Vd2_0Vg3_0.s2p
+    localsavedir = r'C:\Users\hybrid\Desktop\PythonData' # Directory where SMU data will be saved    
+    
+    for x in smus: x.smuSetup(maxVoltage, compliance)
+    test = SMUmeas(smus, localsavedir, testname, delayTime)
+    
+    test.measure(0,1)
+            
+if __name__ == "__main__":
+    main()
