@@ -46,7 +46,7 @@ class AgilentPNAx:
           self.visaobj = rm.open_resource(resource)
         except visa.VisaIOError as e:
           print(e.args)
-          exit
+          raise SystemExit(1)
 
     def pnaInitSetup(self):
         '''

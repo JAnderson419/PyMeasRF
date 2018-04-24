@@ -54,7 +54,7 @@ class AgilentN9030A:
           self.visaobj = rm.open_resource(resource)
         except visa.VisaIOError as e:
           print(e.args)
-          exit
+          raise SystemExit(1)
 
     def read(self, mode):
         '''

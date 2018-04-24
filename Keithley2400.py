@@ -55,7 +55,7 @@ class Keithley2400:
           self.visaobj = rm.open_resource(resource)
         except visa.VisaIOError as e:
           print(e.args)
-          exit
+          raise SystemExit(1)
 
     def smuSetup(self, voltRange = 21, comp = 0.000105):
         '''
