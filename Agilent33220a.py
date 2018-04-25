@@ -56,7 +56,7 @@ class Agilent33220a:
           self.visaobj = rm.open_resource(resource)
         except visa.VisaIOError as e:
           print(e.args)
-          exit
+          raise SystemExit(1)
 
     def basicOutput(self, wform, freq, ampl, offset = 0):
         '''

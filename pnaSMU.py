@@ -112,11 +112,11 @@ class SParmMeas(PNAsmuMeas):
         if self.smus:
             smuData = [None]*len(self.smus)
             for i,x in enumerate(self.smus):
-              if x.voltages.all() == None:
-                raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
-              x.visaobj.write(':FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus')
-              x.resetTime()
-              smuData[i] = [np.zeros(1) for i in range(0,5)]
+                if x.voltages.all() == None:
+                    raise ValueError('No voltages defined for SMU \'{}\''.format(x.label))
+                x.visaobj.write(':FORMat:ELEMents VOLTage, CURRent, RESistance, TIME, STATus')
+                x.resetTime()
+                smuData[i] = [np.zeros(1) for i in range(0,5)]
             currentV = [None for i in range(0,len(self.smus))]
             
             def setVoltageLoop(l = len(self.smus)):
@@ -127,31 +127,34 @@ class SParmMeas(PNAsmuMeas):
                         currentV[l-1] = i
                         setVoltageLoop(l-1)
                 else:
-                  print('Setting SMU voltages. ',end='')
-                  testname2 = self.testname
-                  for i,v in enumerate(currentV):
-                    print('{} {} V'.format(self.smus[i].label,v), end='  ')
-                    self.smus[i].setVoltage(v)
-                    self.smus[i].startMeas(tmeas = self.smuMeasInter)
-                    testname2 = testname2 + '_{}{}V'.format(self.smus[i].label,str(v).replace('.','_'))
-                  print("\nWaiting for {} sec to allow system to equilibriate".format(str(self.delay)))
-                  for i in range(self.delay):
-                      time.sleep(1)
-                      if i%10 == 0:
-                          print(str(i) + "/" + str(self.delay))
+                    print('Setting SMU voltages. ',end='')
+                    testname2 = self.testname
+                    for i,v in enumerate(currentV):
+                        print('{} {} V'.format(self.smus[i].label,v), end='  ')
+                        self.smus[i].setVoltage(v)
+                        self.smus[i].startMeas(tmeas = self.smuMeasInter)
+                        testname2 = testname2 + '_{}{}V'.format(self.smus[i].label,str(v).replace('.','_'))
+                    if self.delay:
+                        print("\nWaiting for {} sec to allow system to equilibriate".format(str(self.delay)))
+                        for i in range(self.delay):
+                            time.sleep(1)
+                            if i%10 == 0:
+                                print(str(i) + "/" + str(self.delay))
                   
-                  self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, testname2, self.pnaparms)
-                  for i,x in enumerate(self.smus):
-                      x.visaobj.timeout = 120000
-                      data = x.stopMeas()
-                      x.visaobj.timeout = 2000
-                      smuData[i] = np.append(smuData[i],self.formatData(data),1)
-                      if self.postMeasDelay: x.setVoltage(0)
-                      
-                  for i in range(self.postMeasDelay):
-                      time.sleep(1)
-                      if i%10 == 0:
-                          print(str(i) + "/" + str(self.postMeasDelay))
+                    self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, testname2, self.pnaparms)
+                    for i,x in enumerate(self.smus):
+                        x.visaobj.timeout = 120000
+                        data = x.stopMeas()
+                        x.visaobj.timeout = 2000
+                        smuData[i] = np.append(smuData[i],self.formatData(data),1)
+                        if self.postMeasDelay: x.setVoltage(0)
+                    
+                    if self.postMeasDelay:
+                        print("\nWaiting for {} sec before the next measurement".format(str(self.postMeasDelay)))
+                        for i in range(self.postMeasDelay):
+                            time.sleep(1)
+                            if i%10 == 0:
+                                print(str(i) + "/" + str(self.postMeasDelay))
                   
          
             setVoltageLoop()

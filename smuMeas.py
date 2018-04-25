@@ -33,11 +33,13 @@ class SMUmeas():
     testname : string
         Identifier for the test that will be used in saved filenames.
     '''
-    def __init__(self, smus, localsavedir, testname, delay = 0):               
+    def __init__(self, smus, localsavedir, testname, delay = 0, measTime = 0, postMeasDelay = 0):               
         self.smus = smus
         self.localsavedir = localsavedir
         self.testname = testname
         self.delay = delay
+        self.measTime = measTime
+        self.postMeasDelay = postMeasDelay
         
     
     def formatData(data):
@@ -49,7 +51,7 @@ class SMUmeas():
         for i,d in enumerate(data): formatData[i % 5][i // 5] = d
         return formatData
     
-    def measure(self, smuX = None, smuY = None):
+    def measure(self, smuX = None, smuY = None, smuZ = None):
         '''
         Uses SMUs as V source and measures time, V force, and I sense. 
         Will plot V vs I for two SMUs, given smuX and smuY
@@ -90,27 +92,48 @@ class SMUmeas():
                 print('{} {} V'.format(self.smus[i].label,v), end='  ')
                 self.smus[i].setVoltage(v)
                 testname2 = testname2 + '_{}{}V'.format(self.smus[i].label,str(v).replace('.','_'))
-              print("\nWaiting for {} sec to allow system to equilibriate".format(str(self.delay)))
-              for i in range(self.delay):
-                  time.sleep(1)
-                  if i%10 == 0:
-                      print(str(i) + "/" + str(self.delay))
+              if self.delay:
+                  print("\nWaiting for {} sec to allow system to equilibriate".format(str(self.delay)))
+                  for i in range(self.delay):
+                      time.sleep(1)
+                      if i%10 == 0:
+                          print(str(i) + "/" + str(self.delay))
               
               
               for i,x in enumerate(self.smus):
                   x.visaobj.timeout = 120000
-                  data = x.meas()
+                  if self.measTime:
+                      print("\nMeasuring for {} sec.".format(str(self.measTime)))
+                      x.startMeas(tmeas = self.smuMeasInter)
+                      for i in range(self.measTime):
+                          time.sleep(1)
+                      data = x.stopMeas()
+                  else:
+                      data = x.meas()
                   x.visaobj.timeout = 2000
                   smuData[i] = np.append(smuData[i],formatData(data),1)
               
+              if self.postMeasDelay:
+                  print("\nWaiting for {} sec before the next measurement".format(str(self.postMeasDelay)))
+                  for i in range(self.postMeasDelay):
+                      time.sleep(1)
+                      if i%10 == 0:
+                          print(str(i) + "/" + str(self.postMeasDelay))                
+                
         setVoltageLoop()
         plt.close('all')  
         if (smuX != None and smuY != None):
             fig = plt.figure(1)
             ax = fig.add_subplot(111)
-            ax.plot(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1])
+            if smuZ != None:
+                ax.scatter(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1], c = smuData[smuZ][:][:,1:][0])
+                cbar = plt.colorbar(ax)
+                cbar.set_label('{} Voltage (V)'.format(self.smus[smuZ].label))
+            else:
+                ax.plot(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1])
             ax.set_xlabel('{} Voltage (V)'.format(self.smus[smuX].label))
             ax.set_ylabel('{} Current (A)'.format(self.smus[smuY].label))
+            
         for i,x in enumerate(self.smus): 
             x.outputOff()
             smuData1 = smuData[i][:][:,1:]
