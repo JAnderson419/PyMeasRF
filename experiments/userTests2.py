@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import AgilentN9030A as pxaUtil
-import Agilent33220a as awgUtil
+from context import pymeasrf
+import pymeasrf.AgilentN9030A as pxaUtil
+import pymeasrf.Agilent33220a as awgUtil
 import numpy as np
 import matplotlib.pyplot as plt
 

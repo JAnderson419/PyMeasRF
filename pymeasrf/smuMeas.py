@@ -154,7 +154,7 @@ class SMUmeas():
             
 def main():
     smus = [
-          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [5,10,15,20,25]),
+          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = np.linspace(0,20,5)),
           k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [.5])
 #          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
            ]

@@ -6,9 +6,8 @@ HybridMEMS
 '''
 
 import visa
-import numpy as np
-import shutil
-import AgilentPNAXUtils as pnaUtils
+from context import pymeasrf
+import pymeasrf.AgilentPNAXUtils as pnaUtils
     
 def main():
     '''

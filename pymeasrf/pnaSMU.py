@@ -8,9 +8,20 @@ HybridMEMS
 import visa
 import numpy as np
 import time
-import AgilentPNAXUtils as pnaUtils
-import Keithley2400 as k2400
+from context import pymeasrf
+import pymeasrf.AgilentPNAXUtils as pnaUtils
+import pymeasrf.Keithley2400 as k2400
 import matplotlib.pyplot as plt
+
+
+def formatData(data):
+    data = data.split(',')
+    n = len(data) / 5
+    if n != int(n):
+        print('Warning! SMU data doesn\'t have expected number of columns.')
+    formatData = [np.zeros(int(n)) for i in range(0,5)]
+    for i,d in enumerate(data): formatData[i % 5][i // 5] = d
+    return formatData
 
 class PNAsmuMeas():
     '''
@@ -41,16 +52,6 @@ class PNAsmuMeas():
         self.savedir = savedir
         self.localsavedir = localsavedir
         self.testname = testname
-        
-    
-    def formatData(data):
-        data = data.split(',')
-        n = len(data) / 5
-        if n != int(n):
-            print('Warning! SMU data doesn\'t have expected number of columns.')
-        formatData = [np.zeros(int(n)) for i in range(0,5)]
-        for i,d in enumerate(data): formatData[i % 5][i // 5] = d
-        return formatData
            
     
 class SParmMeas(PNAsmuMeas): 
@@ -146,7 +147,7 @@ class SParmMeas(PNAsmuMeas):
                         x.visaobj.timeout = 120000
                         data = x.stopMeas()
                         x.visaobj.timeout = 2000
-                        smuData[i] = np.append(smuData[i],self.formatData(data),1)
+                        smuData[i] = np.append(smuData[i],formatData(data),1)
                         if self.postMeasDelay: x.setVoltage(0)
                     
                     if self.postMeasDelay:
@@ -214,7 +215,7 @@ class SParmMeas(PNAsmuMeas):
         print('Estimated completion after: {}.'.format(time.asctime(endTime)))
         for i in range(0,numIntervals):
             print('Starting measurement {}: {}.'.format(i+1,time.asctime()))
-            self.testname = '{}_{}_{}'.format(i+1,time.strftime('%d_%b_%Y_%H:%M:%S'),testname)
+            self.testname = '{}_{}__{}'.format(i+1,time.strftime('%d_%b_%Y__%H_%M_%S'),testname)
             self.measure()
             print('Measurement {} complete: {}.'.format(i+1,time.asctime()))
             print('Waiting for {} hours, {} minutes, and {} seconds.'.format(meashr,measmin,meassec))
@@ -257,7 +258,7 @@ def main():
 
     smus = [
 #          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0]),
-          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [.2, .4])
+          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = np.linspace(-1,-10,10))
 #          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
            ]
 
@@ -266,7 +267,7 @@ def main():
     ports = '1,2' # string containing comma separated port numbers to be used
     delayTime = 2 #Time between setting SMU voltage and measurement in seconds
 
-    testname = 'Test2' # name snp files will be saved as current file name format is as follows:
+    testname = '24hr_GaN' # name snp files will be saved as current file name format is as follows:
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'
     #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
     #load_Vg1_0Vd2_0Vg3_0.s2p
@@ -291,7 +292,7 @@ def main():
     pna.pnaInitSetup()
     meas = SParmMeas(smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     try:
-      meas.measure()
+      meas.timeIntervalMeasure(900,72)
     except visa.VisaIOError as e:
         print(e.args)
         pna.outputOff   

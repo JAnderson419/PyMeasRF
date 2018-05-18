@@ -5,8 +5,8 @@ Created on Thu Jan 11 15:27:42 2018
 ander906@purdue.edu
 HybridMEMS
 """
-
-import Keithley2400 as k2400
+from context import pymeasrf
+import pymeasrf.Keithley2400 as k2400
 import time
 
 drain = k2400.Keithley2400('GPIB1::25::INSTR')
