@@ -167,7 +167,7 @@ class AgilentPNAx:
         if ifBandwidth: pna.write('SENSe1:BANDwidth {}'.format(ifBandwidth))
 
         
-    def sMeas(self, sPorts, savedir, localsavedir, testname, pnaparms = None):
+    def sMeas(self, sPorts, savedir, localsavedir, testname, pnaparms = None, bal = False):
         '''
         Perform and save an s-parameter measurement.
         
@@ -183,6 +183,8 @@ class AgilentPNAx:
             Identifier for the test that will be used in saved filenames.
         pnaparms : dict
             A dictionary containing test parameters to set on the pna.
+        bal : bool
+            Toggles Balanced-Balanced measurements with integrated true mode stimulus on/off.
             
         Returns:
         ----------
@@ -193,6 +195,12 @@ class AgilentPNAx:
         ValueError
             Number of ports doesn't match physically available port numbers.
         '''
+        
+        sParmsBBal = np.array([['SDD11','SDD12','SDC11','SDC12'],
+                               ['SDD21','SDD22','SDC21','SDC22'],
+                               ['SCD11','SCD12','SCC11','SCC12'],
+                               ['SCD21','SCD22','SCC21','SCC22']])
+        
         pna = self.visaobj
         
         sParms = []
@@ -201,6 +209,9 @@ class AgilentPNAx:
         if len(nums) < 1 or len(nums) > 4:
             raise ValueError('Please Specify a number of ports between 1 and 4. '
                              'Currently, {} ports are specified.'.format(str(len(nums))))
+        if bal and len(nums) != 4:
+            raise ValueError('Bal-Bal measurement selected but number of ports does not equal 4.')
+            
         filename = '{}.s{}p'.format(testname,str(len(nums)))
         if pnaparms:
             self.pnaSetup(nums, **pnaparms)
@@ -215,6 +226,9 @@ class AgilentPNAx:
                 measName = 'meas'+s 
                 print(measName)
                 pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
+                if bal:
+                    pna.write("CALCulate:FSIMulator:BALun:PARameter:STATe ON")
+                    pna.write("CALCulate:FSIMulator:BALun:PARameter:BBALanced:DEFine {}".format(sParmsBBal[i-1,j-1]))
                 pna.write("DISPlay:WINDow{}:TRACe{}:FEED \'{}\'".format(i,j,measName))
         
         
@@ -224,6 +238,14 @@ class AgilentPNAx:
 #            pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
 #            pna.write('CALCulate1:PARameter:SELect \"{}\"'.format(measName))
 #            pna.write("DISPlay:WINDow1:TRACe1:FEED \'{}\'".format(measName)) # duplicate trace number
+        if bal: 
+            pna.write("CALCulate1:FSIMulator:BALun:STIMulus:MODE TM")
+            pna.write("CALCulate:FSIMulator:BALun:DEVice BBALanced")
+            pna.write("CALCulate:FSIMulator:BALun:TOPology:BBALanced:PPORts 1,3,2,4")
+        else:
+            pna.write("CALCulate1:FSIMulator:BALun:STIMulus:MODE SE")
+            
+                
         pna.timeout = 450000
         pna.write("SENSe1:SWEep:MODE SINGle") 
         pna.query('*OPC?')
