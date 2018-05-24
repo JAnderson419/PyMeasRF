@@ -327,3 +327,45 @@ class AgilentPNAx:
         N/A
         '''
         print(self.visaobj.query('CSET:CATalog?'))
+        
+    def saveState(self, filename):
+        '''
+        Saves the stimulus state of the instrument in an .sta file.
+        
+        Parameters:
+        -----------
+        filename: filename (including path) you wish to save data under.
+        
+        Returns:
+        -----------
+        N/A
+        '''
+        self.visaobj.write('MMEMory:STORe:STATe {}'.format(filename))
+
+    def saveCal(self, filename):
+        '''
+        Saves the calibration of the instrument in a .cal file.
+        
+        Parameters:
+        -----------
+        filename: filename (including path) you wish to save data under.
+        
+        Returns:
+        -----------
+        N/A
+        '''
+        self.visaobj.write('MMEMory:STORe:CORRection {}'.format(filename))
+        
+    def saveStateCal(self, filename):
+        '''
+        Saves the stimulus settings and calibration of the instrument in a .csa file.
+        
+        Parameters:
+        -----------
+        filename: filename (including path) you wish to save data under.
+        
+        Returns:
+        -----------
+        N/A
+        '''
+        self.visaobj.write('MMEMory:STORe:CSARchive {}'.format(filename))
