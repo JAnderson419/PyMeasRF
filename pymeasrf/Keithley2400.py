@@ -28,6 +28,7 @@ class Keithley2400:
         N/A
         '''
         self.connect(resource, label, voltages) 
+        self.voltageLimits = [20,40,60,80,120,160,210]
     
     def connect(self, resource, label = None, voltages = None):
         '''
@@ -57,14 +58,16 @@ class Keithley2400:
           print(e.args)
           raise SystemExit(1)
 
-    def smuSetup(self, voltRange = 21, comp = 0.000105):
+    def smuSetup(self, maxVolt = 20, comp = 0.000105):
         '''
-        Sets the compliance of the SMU.
+        Sets the compliance of the SMU. Voltage protection is set to the smallest
+        value that allows tests to be completed (smallest value larger than maxVolt).
+        Default values for 2400 are 105uA, 20V
         
         Parameters:
         -----------
-        voltRange : float
-            Does nothing right now.
+        maxVolt : float
+            Maximum voltage to be applied to the device during testing.
         comp : float
             The current compliance to be set in amps.
         
@@ -73,12 +76,23 @@ class Keithley2400:
         N/A
         '''
        # smu.write(':DISPlay:ENABle 1; CNDisplay')
-        
-        if comp: # set compliance if given. Default for 2400 is 105uA, 21V
-#            self.visaobj.write(':SENSe:VOLTage:RANGe ' + str(voltRange))
-            self.visaobj.write(':SENSe:CURRent:PROTection:LEVel ' + str(comp))
+
         self.visaobj.write('SOURce:FUNCtion:MODE VOLTage')
-        self.visaobj.write('SOURce:VOLTage:LEVel 0')
+        self.visaobj.write('SOURce:VOLTage:RANGe:AUTO 1')
+        self.visaobj.write('SOURce:VOLTage 0')        
+        if maxVolt >160:
+            print('Specified voltage larger than 160 V. Setting limit to 210 V.')
+            self.visaobj.write('SOURce:VOLTage:PROTection:LEVel NONE')
+        else:
+            for i in self.voltageLimits:
+                if maxVolt > i:
+                    next
+                else:
+                    self.visaobj.write('SOURce:VOLTage:PROTection:LEVel ' + str(i))
+                    break
+        self.visaobj.write(':SENSe:CURRent:PROTection:LEVel ' + str(comp))
+#        self.visaobj.write('SOURce:FUNCtion:MODE VOLTage')
+#        self.visaobj.write('SOURce:VOLTage:LEVel 0')
 
     def setVoltage(self,voltage):
         '''
@@ -93,7 +107,7 @@ class Keithley2400:
         ----------
         N/A
         '''
-        self.visaobj.write('SOURce:VOLTage:LEVel {}'.format(str(voltage)))
+        self.visaobj.write('SOURce:VOLTage {}'.format(str(voltage)))
         self.visaobj.write(':CONFigure:VOLTage:DC')
         self.visaobj.query('*OPC?')
         self.visaobj.write(':SENSe:FUNCtion:ON "CURRent"')
