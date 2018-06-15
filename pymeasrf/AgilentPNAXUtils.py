@@ -165,16 +165,15 @@ class AgilentPNAx:
           pna.write('SENSe1:FREQuency:CENTer {}'.format(centFreq))
           pna.write('SENSe1:FREQuency:SPAN {}'.format(spanFreq))
       if srcPower:
-          maxPower = pna.query('SOURce1:POWer? MAX')
-          minPower = pna.query('SOURce1:POWer? MIN')
-          if srcPower >= minPower and srcPower <= maxPower:
-              pna.write('SOURce1:POWer1 {}'.format(srcPower))
-              pna.write('SOURce1:POWer2 {}'.format(srcPower))
-              pna.write('SOURce1:POWer3 {}'.format(srcPower))
-              pna.write('SOURce1:POWer4 {}'.format(srcPower))
-          else:
-              warnings.warn('Specified source power of {} not within the allowed \
-                            range of {} to {} dBm.'.format(srcPower,minPower,maxPower))
+          for i in [1,2,3,4]:
+              maxPower = pna.query('SOURce{}:POWer? MAX'.format(i))
+              minPower = pna.query('SOURce1:POWer? MIN')
+              if srcPower >= minPower and srcPower <= maxPower:
+                  pna.write('SOURce{}:POWer1 {}'.format(i,srcPower))
+              else:
+                  warnings.warn('Specified source power of {} for port {} not\
+                                within the allowed range of {} to {} dBm.'
+                                .format(srcPower,i,minPower,maxPower))
         ###
         if avgMode: pna.write('SENSe1:AVERage:MODE {}'.format(avgMode))
         if nAvg: pna.write('SENSe1:AVERage:COUNt {}'.format(nAvg))
