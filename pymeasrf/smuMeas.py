@@ -33,13 +33,14 @@ class SMUmeas():
     testname : string
         Identifier for the test that will be used in saved filenames.
     '''
-    def __init__(self, smus, localsavedir, testname, delay = 0, measTime = 0, postMeasDelay = 0):               
+    def __init__(self, smus, localsavedir, testname, delay = 0, measTime = 0, postMeasDelay = 0, smuMeasInter = 1):               
         self.smus = smus
         self.localsavedir = localsavedir
         self.testname = testname
         self.delay = delay
         self.measTime = measTime
         self.postMeasDelay = postMeasDelay
+        self.smuMeasInter = smuMeasInter
         
     
     def formatData(data):
@@ -102,18 +103,20 @@ class SMUmeas():
               
               for i,x in enumerate(self.smus):
                   x.visaobj.timeout = 120000
-                  if self.measTime:
+                  if self.measTime > self.smuMeasInter:
                       print("\nMeasuring for {} sec.".format(str(self.measTime)))
                       x.startMeas(tmeas = self.smuMeasInter)
-                      for i in range(self.measTime):
+                      for r in range(self.measTime):
                           time.sleep(1)
                       data = x.stopMeas()
                   else:
                       data = x.meas()
+                  if self.postMeasDelay: x.setVoltage(0)
                   x.visaobj.timeout = 2000
                   smuData[i] = np.append(smuData[i],formatData(data),1)
               
               if self.postMeasDelay:
+                  
                   print("\nWaiting for {} sec before the next measurement".format(str(self.postMeasDelay)))
                   for i in range(self.postMeasDelay):
                       time.sleep(1)
@@ -154,25 +157,28 @@ class SMUmeas():
             
 def main():
     smus = [
-          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = np.linspace(0,20,5)),
-          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [.5])
+#          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = np.linspace(0,20,5)),
+          k2400.Keithley2400('GPIB0::25::INSTR', label ='drain', voltages = np.linspace(.05,2,40))
 #          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
            ]
 
     compliance = 0.100 #Amps IE 105uA = 0.000105 
-    maxVoltage = 100 #Maximum expected voltage to be used 
-    delayTime = 2 #Time between setting SMU voltage and measurement in seconds
+    maxVoltage = 1 #Maximum expected voltage to be used 
+    delayTime = 0 #Time between setting SMU voltage and measurement in seconds
 
-    testname = 'Test2' # name snp files will be saved as current file name format is as follows:
+#    testname = 'HeatingTest_SteadyStateRes_180sDelay_180sCool_2Vmax' # name snp files will be saved as current file name format is as follows:
+    testname = 'HeatingTest_180sSoak_180sCool_2Vmax'
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'
     #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
     #load_Vg1_0Vd2_0Vg3_0.s2p
-    localsavedir = r'C:\Users\hybrid\Desktop\PythonData' # Directory where SMU data will be saved    
+    localsavedir = r'C:\Users\ander906\Google Drive\Test Equipment\Home\microbolometer' # Directory where SMU data will be saved    
     
-    for x in smus: x.smuSetup(maxVoltage, compliance)
-    test = SMUmeas(smus, localsavedir, testname, delayTime)
+    for x in smus: 
+        x.smuSetup(maxVoltage, compliance)
+        x.visaobj.write(':SYSTem:BEEPer:STATe 0')
+    test = SMUmeas(smus, localsavedir, testname, delay = 0, measTime = 180, postMeasDelay = 180)
     
-    test.measure(0,1)
+    test.measure()
             
 if __name__ == "__main__":
     main()

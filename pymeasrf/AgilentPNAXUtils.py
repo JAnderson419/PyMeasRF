@@ -8,6 +8,7 @@ HybridMEMS
 import visa
 import numpy as np
 import re as re
+import warnings
 
 class AgilentPNAx:
     def __init__(self, resource):
@@ -111,7 +112,7 @@ class AgilentPNAx:
         
         
     def pnaSetup(self, portNums, ifBandwidth = None,startFreq = None, stopFreq = None,
-                 centFreq = None, spanFreq = None, nPoints = None, 
+                 centFreq = None, spanFreq = None, srcPower = None, nPoints = None, 
                  avgMode = None, nAvg = None):
         '''
         PNA measurement setup. Unpacks a dict of setup 
@@ -130,6 +131,8 @@ class AgilentPNAx:
             frequency range of measurement. Max: 50 GHz. Cannot be used with start/stopFreq.
         startFreq & stopFreq : int
             frequency range of measurement. Max: 50 GHz. Cannot be used with center/spanFreq.
+        srcPower : int
+            Source power in dBm to set all the ports at.
         nPoints : int
             number of points in measurement (1 to 32,001)
         avgMode : string
@@ -161,6 +164,17 @@ class AgilentPNAx:
         if centFreq and spanFreq: 
           pna.write('SENSe1:FREQuency:CENTer {}'.format(centFreq))
           pna.write('SENSe1:FREQuency:SPAN {}'.format(spanFreq))
+      if srcPower:
+          maxPower = pna.query('SOURce1:POWer? MAX')
+          minPower = pna.query('SOURce1:POWer? MIN')
+          if srcPower >= minPower and srcPower <= maxPower:
+              pna.write('SOURce1:POWer1 {}'.format(srcPower))
+              pna.write('SOURce1:POWer2 {}'.format(srcPower))
+              pna.write('SOURce1:POWer3 {}'.format(srcPower))
+              pna.write('SOURce1:POWer4 {}'.format(srcPower))
+          else:
+              warnings.warn('Specified source power of {} not within the allowed \
+                            range of {} to {} dBm.'.format(srcPower,minPower,maxPower))
         ###
         if avgMode: pna.write('SENSe1:AVERage:MODE {}'.format(avgMode))
         if nAvg: pna.write('SENSe1:AVERage:COUNt {}'.format(nAvg))
