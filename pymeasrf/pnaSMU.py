@@ -12,6 +12,7 @@ from context import pymeasrf
 import pymeasrf.AgilentPNAXUtils as pnaUtils
 import pymeasrf.Keithley2400 as k2400
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 
 def formatData(data):
@@ -100,16 +101,36 @@ class SParmMeas(PNAsmuMeas):
     N/A
     '''
     def __init__(self, smus, pna, sPorts, savedir, localsavedir, testname, delay = 0,
-                  postMeasDelay = 0, smuMeasInter = 1, pnaparms = None):      
+                  postMeasDelay = 0, smuMeasInter = 1.0, power = None, pnaparms = None, trueMode = False):      
         PNAsmuMeas.__init__(self,smus,pna,sPorts,savedir,localsavedir,testname)
         self.delay = delay
         self.postMeasDelay = postMeasDelay
         self.smuMeasInter = smuMeasInter
         self.pnaparms = pnaparms
+        self.trueMode = trueMode
+        self.power = power
         
         
-    def measure(self):
+    def measure(self, smuX = None, smuY = None, smuZ = None):
+        '''
+        Uses SMUs as V source and measures time, V force, and I sense. 
+        Will plot V vs I for two SMUs, given smuX and smuY
         
+        Parameters
+        -----------
+        
+        smuX : int
+            Position of x-axis SMU (voltage data) in list passed at creation of measurement.
+            
+        smuY : int
+            Position of y-axis SMU (current data) in list passed at creation of measurement.
+        smuZ : int
+            Position of z-axis (color) SMU (voltage data) in list passed at creation of measurement.
+            
+        Returns
+        -----------
+        N/A
+        '''        
         if self.smus:
             smuData = [None]*len(self.smus)
             for i,x in enumerate(self.smus):
@@ -124,7 +145,7 @@ class SParmMeas(PNAsmuMeas):
               
                 if l >= 1:
                     for i in self.smus[l-1].voltages:
-                        print('{} {}'.format(self.smus[l-1].label,i))
+#                        print('{} {}'.format(self.smus[l-1].label,i))
                         currentV[l-1] = i
                         setVoltageLoop(l-1)
                 else:
@@ -135,6 +156,7 @@ class SParmMeas(PNAsmuMeas):
                         self.smus[i].setVoltage(v)
                         self.smus[i].startMeas(tmeas = self.smuMeasInter)
                         testname2 = testname2 + '_{}{}V'.format(self.smus[i].label,str(v).replace('.','_'))
+                    print()
                     if self.delay:
                         print("\nWaiting for {} sec to allow system to equilibriate".format(str(self.delay)))
                         for i in range(self.delay):
@@ -142,7 +164,7 @@ class SParmMeas(PNAsmuMeas):
                             if i%10 == 0:
                                 print(str(i) + "/" + str(self.delay))
                   
-                    self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, testname2, self.pnaparms)
+                    self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, testname2, self.power, self.pnaparms, bal = self.trueMode)
                     for i,x in enumerate(self.smus):
                         x.visaobj.timeout = 120000
                         data = x.stopMeas()
@@ -160,26 +182,42 @@ class SParmMeas(PNAsmuMeas):
          
             setVoltageLoop()
         else:
-            self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, self.testname, self.pnaparms)
+            self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, self.testname, self.power, self.pnaparms, bal = self.trueMode)
         
-        plt.close('all')      
-        for i,x in enumerate(self.smus): 
-            x.outputOff()
-            smuData1 = smuData[i][:][:,1:]
-            filename = '{}\\{}_{}.csv'.format(self.localsavedir,self.testname,x.label)
-            print('Saving {} data on local PC in {}'.format(x.label,filename))
-            np.savetxt(filename,np.transpose(smuData1),delimiter=',')
-          
-            # plot data
-            fig = plt.figure(i)
-            fig.suptitle(x.label)
-            ax = fig.add_subplot(211)
-            ax.plot(smuData1[3],smuData1[1],'.',markersize=10)
-            ax.set_ylabel('Current (A)')
-            ax1 = fig.add_subplot(212)
-            ax1.plot(smuData1[3],smuData1[0],'.',markersize=10)
-            ax1.set_xlabel('Time (s)')
-            ax1.set_ylabel('Voltage (V)')
+        plt.close('all') 
+        
+        if self.smus:
+            if (smuX != None and smuY != None):
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                if smuZ != None:
+                    colormap = mpl.cm.get_cmap('jet',len(smuData[smuZ][:][:,1:][0]))
+                    ax.scatter(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1]*1E6, c = smuData[smuZ][:][:,1:][0], cmap = colormap)
+#                    cbar = plt.colorbar(ax)
+#                    cbar.set_label('{} Voltage (V)'.format(self.smus[smuZ].label))
+                else:
+                    ax.plot(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1]*1E6)
+                ax.set_xlabel('{} Voltage (V)'.format(self.smus[smuX].label))
+                ax.set_ylabel('{} Current (uA)'.format(self.smus[smuY].label))
+                plt.savefig('{}\\{}_xy'.format(self.localsavedir,self.testname))
+                
+            for i,x in enumerate(self.smus): 
+                x.outputOff()
+                smuData1 = smuData[i][:][:,1:]
+                filename = '{}\\{}_{}.csv'.format(self.localsavedir,self.testname,x.label)
+                print('Saving {} data on local PC in {}'.format(x.label,filename))
+                np.savetxt(filename,np.transpose(smuData1),delimiter=',')
+              
+                # plot data
+                fig = plt.figure()
+                fig.suptitle(x.label)
+                ax = fig.add_subplot(211)
+                ax.plot(smuData1[3],smuData1[1]*1E6,'.',markersize=10)
+                ax.set_ylabel('Current (uA)')
+                ax1 = fig.add_subplot(212)
+                ax1.plot(smuData1[3],smuData1[0],'.',markersize=10)
+                ax1.set_xlabel('Time (s)')
+                ax1.set_ylabel('Voltage (V)')
             
     def timeIntervalMeasure(self, measTimeInterval, numIntervals):
         '''
@@ -257,22 +295,22 @@ def main():
     ################################################################################################################
 
     smus = [
-#          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0]),
-          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = np.linspace(-1,-10,10))
-#          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
+          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = [0.8]),
+          k2400.Keithley2400('GPIB1::25::INSTR', label ='drain', voltages = [0.17]),
+          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
            ]
 
-    compliance = 0.100 #Amps IE 105uA = 0.000105 
-    maxVoltage = 100 #Maximum expected voltage to be used 
-    ports = '1,2' # string containing comma separated port numbers to be used
+    compliance = 0.200 #Amps IE 105uA = 0.000105 
+    maxVoltage = 20 #Maximum expected voltage to be used 
+    ports = '1,2,3,4' # string containing comma separated port numbers to be used
     delayTime = 2 #Time between setting SMU voltage and measurement in seconds
 
-    testname = '24hr_GaN' # name snp files will be saved as current file name format is as follows:
+    testname = 'RFTtest' # name snp files will be saved as current file name format is as follows:
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'
     #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
     #load_Vg1_0Vd2_0Vg3_0.s2p
-    savedir = 'C:\\Documents\\pyvisa' # Directory where snp files will be saved on PNA
-    localsavedir = r'C:\Users\hybrid\Desktop\PythonData' # Directory where SMU data will be saved
+    savedir = 'C:\\Documents\\RFT' # Directory where snp files will be saved on PNA
+    localsavedir = r'D:\MeasurementData\RFT' # Directory where SMU data will be saved
     ############################# END User specified test Parameters ###############################################
     ################################################################################################################
     ################################################################################################################
@@ -290,9 +328,10 @@ def main():
 
     for x in smus: x.smuSetup(maxVoltage, compliance)
     pna.pnaInitSetup()
-    meas = SParmMeas(smus, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
+    meas = SParmMeas(None, pna, ports, savedir, localsavedir, testname, delayTime, pnaTestParms)
     try:
-      meas.timeIntervalMeasure(900,72)
+       meas.measure()
+#      meas.timeIntervalMeasure(900,144)
     except visa.VisaIOError as e:
         print(e.args)
         pna.outputOff   
