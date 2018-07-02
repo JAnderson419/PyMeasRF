@@ -10,8 +10,8 @@ import numpy as np
 
 
 
-gateFile = r'F:\RFT\C1_dbmSweep_noDC\smus\C1_IdVd_gate.csv'
-drainFile = r'F:\RFT\C1_dbmSweep_noDC\smus\C1_IdVd_drain.csv'
+gateFile = r'F:\atf35143\atf35143_IdVd_gate.csv'
+drainFile = r'F:\atf35143\atf35143_IdVd_drain.csv'
 
 z = 1
 gate = np.genfromtxt(gateFile, delimiter = ',')
@@ -27,8 +27,9 @@ idr = drain[1]
 vg = np.around(vg,decimals = 3)
 change = np.where(np.diff(vg))[0]+1
 change = np.append(change,[-1])
+print(vg)
 print(change)
-
+print(vg[change-1])
 plt.close('all')    
 fig = plt.figure(1)
 ax = fig.add_subplot(111)
@@ -40,6 +41,9 @@ if z:
             ax.plot(vdr[0:i],idr[0:i]*1E6,'.')
         else:
             ax.plot(vdr[change[x-1]:i],idr[change[x-1]:i]*1E6,'.')
-    ax.legend(vg[change])
+    ax.legend(vg[change-1])
 else:
     ax.plot(vdr,idr*1E6,'.')
+    
+ax.set_xlabel('V$_{DS}$ [V]')
+ax.set_ylabel('I$_D$ [$\mu$A]')
