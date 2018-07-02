@@ -79,6 +79,7 @@ class Keithley2400:
 
         self.visaobj.write('SOURce:FUNCtion:MODE VOLTage')
         self.visaobj.write('SOURce:VOLTage:RANGe:AUTO 1')
+        self.visaobj.write('SENSe:CURRent:DC:RANGe:AUTO 1')
         self.visaobj.write('SOURce:VOLTage 0')        
         if maxVolt >160:
             print('Specified voltage larger than 160 V. Setting limit to 210 V.')
@@ -221,8 +222,11 @@ class Keithley2400:
         ----------
         N/A
         '''
-        self.setVoltage(0)
+        self.visaobj.timeout = 100000
+        if self.visaobj.query('SOURce:VOLTage?') != 0:
+            self.setVoltage(0)
         self.visaobj.write(':OUTPut:STATe OFF')        
+        self.visaobj.timeout = 20000
         
     def disconnect(self):
         '''

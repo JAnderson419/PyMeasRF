@@ -8,9 +8,11 @@ HybridMEMS
 import visa
 import numpy as np
 import time
-import AgilentPNAXUtils as pnaUtils
-import Keithley2400 as k2400
+from context import pymeasrf
+import pymeasrf.AgilentPNAXUtils as pnaUtils
+import pymeasrf.Keithley2400 as k2400
 import matplotlib.pyplot as plt
+import matplotlib as mpl
     
 def formatData(data):
     data = data.split(',')
@@ -66,6 +68,9 @@ class SMUmeas():
         smuY : int
             Position of y-axis (current) SMU in list passed at creation of SMUmeas.
             
+        smuZ : int
+            Position of z-axis (color) SMU (voltage data) in list passed at creation of measurement.
+            
         Returns
         -----------
         N/A
@@ -83,7 +88,7 @@ class SMUmeas():
           
             if l >= 1:
                 for i in self.smus[l-1].voltages:
-                    print('{} {}'.format(self.smus[l-1].label,i))
+#                    print('{} {}'.format(self.smus[l-1].label,i))
                     currentV[l-1] = i
                     setVoltageLoop(l-1)
             else:
@@ -93,6 +98,7 @@ class SMUmeas():
                 print('{} {} V'.format(self.smus[i].label,v), end='  ')
                 self.smus[i].setVoltage(v)
                 testname2 = testname2 + '_{}{}V'.format(self.smus[i].label,str(v).replace('.','_'))
+              print('') # prints newline character after SMU voltages are listed
               if self.delay:
                   print("\nWaiting for {} sec to allow system to equilibriate".format(str(self.delay)))
                   for i in range(self.delay):
@@ -126,17 +132,20 @@ class SMUmeas():
         setVoltageLoop()
         plt.close('all')  
         if (smuX != None and smuY != None):
-            fig = plt.figure(1)
+            fig = plt.figure()
             ax = fig.add_subplot(111)
             if smuZ != None:
-                ax.scatter(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1], c = smuData[smuZ][:][:,1:][0])
-                cbar = plt.colorbar(ax)
-                cbar.set_label('{} Voltage (V)'.format(self.smus[smuZ].label))
+                colormap = mpl.cm.get_cmap('jet',len(smuData[smuZ][:][:,1:][0]))
+                ax.scatter(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1]*1E6, c = smuData[smuZ][:][:,1:][0])
+#                cbar = fig.colorbar(ax)
+#                cbar.set_label('{} Voltage (V)'.format(self.smus[smuZ].label))
             else:
                 ax.plot(smuData[smuX][:][:,1:][0],smuData[smuY][:][:,1:][1])
             ax.set_xlabel('{} Voltage (V)'.format(self.smus[smuX].label))
-            ax.set_ylabel('{} Current (A)'.format(self.smus[smuY].label))
-            
+            ax.set_ylabel('{} Current (uA)'.format(self.smus[smuY].label))
+            ax.set_title(self.testname)
+            plt.savefig('{}\\{}_xy'.format(self.localsavedir,self.testname))
+                
         for i,x in enumerate(self.smus): 
             x.outputOff()
             smuData1 = smuData[i][:][:,1:]
@@ -145,11 +154,11 @@ class SMUmeas():
             np.savetxt(filename,np.transpose(smuData1),delimiter=',')
           
             # plot data
-            fig = plt.figure(i+2)
+            fig = plt.figure()
             fig.suptitle(x.label)
             ax = fig.add_subplot(211)
-            ax.plot(smuData1[3],smuData1[1],'.',markersize=10)
-            ax.set_ylabel('Current (A)')
+            ax.plot(smuData1[3],smuData1[1]*1E6,'.',markersize=10)
+            ax.set_ylabel('Current (uA)')
             ax1 = fig.add_subplot(212)
             ax1.plot(smuData1[3],smuData1[0],'.',markersize=10)
             ax1.set_xlabel('Time (s)')
