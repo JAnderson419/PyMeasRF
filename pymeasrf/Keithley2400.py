@@ -222,11 +222,27 @@ class Keithley2400:
         ----------
         N/A
         '''
+<<<<<<< HEAD
     #    self.visaobj.timeout = 100000
     #    if self.visaobj.query('SOURce:VOLTage?') != 0:
     #        self.setVoltage(0)
     #    self.visaobj.write(':OUTPut:STATe OFF')        
      #   self.visaobj.timeout = 20000
+=======
+<<<<<<< HEAD
+        self.visaobj.timeout = 100000
+        if self.visaobj.query('SOURce:VOLTage?') != 0:
+            self.setVoltage(0)
+        self.visaobj.write(':OUTPut:STATe OFF')        
+        self.visaobj.timeout = 20000
+=======
+        self.visaobj.timeout = 10000
+        if self.visaobj.query('SOURce:VOLTage?') != 0:
+            self.setVoltage(0)
+        self.visaobj.write(':OUTPut:STATe OFF')        
+        self.visaobj.timeout = 2000
+>>>>>>> d245a6b3a85b76cde360267a90884ca6cd042626
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
         
     def disconnect(self):
         '''

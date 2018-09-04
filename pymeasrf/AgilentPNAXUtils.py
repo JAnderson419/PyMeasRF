@@ -181,7 +181,11 @@ class AgilentPNAx:
         if ifBandwidth: pna.write('SENSe1:BANDwidth {}'.format(ifBandwidth))
 
         
+<<<<<<< HEAD
     def sMeas(self, sPorts, savedir, localsavedir, testname, power = None, pnaparms = None, bal = False, phase = 0):
+=======
+    def sMeas(self, sPorts, savedir, localsavedir, testname, power = None, pnaparms = None, bal = False):
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
         '''
         Perform and save an s-parameter measurement.
         
@@ -273,8 +277,12 @@ class AgilentPNAx:
 #                                    within the allowed range of {} to {} dBm.'
 #                                    .format(power,p,minPower,maxPower)) 
 #                            
+<<<<<<< HEAD
         pna.timeout = 9000000
 #        pna.write('SENSe1:CORRection OFF') # turn cal off for testing
+=======
+        pna.timeout = 450000
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
         pna.write("SENSe1:SWEep:MODE SINGle") 
         pna.query('*OPC?')
 #            pna.write("DISPlay:WINDow1:TRACe1:DELete")    

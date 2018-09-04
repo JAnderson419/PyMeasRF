@@ -10,6 +10,7 @@ def oscMeas():
     plot = 0
     savedir = r'C:\Users\BRKAdmin\Documents\Shreyas'
     testname = r'test'
+    vpp = [0.02,0.1,0.5,1]
     vOffset = np.linspace(-0.7,0,1)
     fDrive = np.linspace(16000.200,16000.300,20)
     
@@ -22,13 +23,13 @@ def oscMeas():
     awg = awgUtil.Agilent33220a('TCPIP0::169.254.2.20::inst0::INSTR')
     data = {}    
 
-    for i,v in enumerate(vOffset):
+    for i,voff in enumerate(vOffset):
         for j,f in enumerate(fDrive):
-            awg.basicOutput('SIN',f,0.05,v)
+            awg.basicOutput('SIN',f,0.05,voff)
             data['raw'] = pxa.read('SAN')
             data['freq'] = data['raw'].split(',')[0::2]
             data['mag'] = data['raw'].split(',')[1::2]
-            filename = '{}\\{}_{}_{}_{}Voff_{}Freq.csv'.format(savedir,testname,i,j,v,f)
+            filename = '{}\\{}_{}_{}_{}Voff_{}Freq.csv'.format(savedir,testname,i,j,voff,f)
             print('Saving data on local PC in {}'.format(filename))
             f =  open(filename, 'w')
             for q, l in enumerate(data['freq']):

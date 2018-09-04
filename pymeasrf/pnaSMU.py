@@ -102,7 +102,11 @@ class SParmMeas(PNAsmuMeas):
     '''
 
     def __init__(self, smus, pna, sPorts, savedir, localsavedir, testname, delay = 0,
+<<<<<<< HEAD
                  postMeasDelay = 0, smuMeasInter = 1.0, power = None, pnaparms = None, trueMode = False, phaseOffset = 0): 
+=======
+                  postMeasDelay = 0, smuMeasInter = 1.0, power = None, pnaparms = None, trueMode = False):      
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
         PNAsmuMeas.__init__(self,smus,pna,sPorts,savedir,localsavedir,testname)
         self.delay = delay
         self.postMeasDelay = postMeasDelay
@@ -110,14 +114,25 @@ class SParmMeas(PNAsmuMeas):
         self.pnaparms = pnaparms
         self.trueMode = trueMode
         self.power = power
+<<<<<<< HEAD
         self.phaseOffset = phaseOffset
         
+=======
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
         
     def measure(self, smuX = None, smuY = None, smuZ = None):
         '''
         Uses SMUs as V source and measures time, V force, and I sense. 
         Will plot V vs I for two SMUs, given smuX and smuY
         
+<<<<<<< HEAD
+=======
+    def measure(self, smuX = None, smuY = None, smuZ = None):
+        '''
+        Uses SMUs as V source and measures time, V force, and I sense. 
+        Will plot V vs I for two SMUs, given smuX and smuY
+        
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
         Parameters
         -----------
         
@@ -168,12 +183,20 @@ class SParmMeas(PNAsmuMeas):
                             if i%10 == 0:
                                 print(str(i) + "/" + str(self.delay))
                   
+<<<<<<< HEAD
                     self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, testname2, self.power,
                                    self.pnaparms, bal = self.trueMode, phase = self.phaseOffset)
                     for i,x in enumerate(self.smus):
                         x.visaobj.timeout = 1200000
                         data = x.stopMeas()
                         x.visaobj.timeout = 2000000
+=======
+                    self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, testname2, self.power, self.pnaparms, bal = self.trueMode)
+                    for i,x in enumerate(self.smus):
+                        x.visaobj.timeout = 1200000
+                        data = x.stopMeas()
+                        x.visaobj.timeout = 20000
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
                         smuData[i] = np.append(smuData[i],formatData(data),1)
                         if self.postMeasDelay: x.setVoltage(0)
                     
@@ -190,7 +213,10 @@ class SParmMeas(PNAsmuMeas):
             self.pna.sMeas(self.sPorts, self.savedir, self.localsavedir, self.testname, self.power, self.pnaparms, bal = self.trueMode)
         
         plt.close('all') 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 442f6d7758c9746588aaaee6fc57daca4da79790
         
         if self.smus:
             if (smuX != None and smuY != None):
