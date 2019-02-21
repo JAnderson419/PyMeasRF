@@ -257,6 +257,7 @@ class AgilentPNAx:
         else:
             pna.write("CALCulate1:FSIMulator:BALun:STIMulus:MODE SE")
 
+        if power != None:
             if bal:
                 portnames = ['Bal Port 1','Bal Port 2']
             else:
