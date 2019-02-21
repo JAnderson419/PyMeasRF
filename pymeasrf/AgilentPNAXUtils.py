@@ -111,7 +111,7 @@ class AgilentPNAx:
         self.visaobj.close()
         
         
-    def pnaSetup(self, portNums, ifBandwidth = None,startFreq = None, stopFreq = None,
+    def pnaSetup(self, portNums, ifBandwidth = None, startFreq = None, stopFreq = None,
                  centFreq = None, spanFreq = None, srcPower = None, nPoints = None, 
                  avgMode = None, nAvg = None):
         '''
@@ -150,8 +150,9 @@ class AgilentPNAx:
         pna = self.visaobj
         pna.write('CALCulate:PARameter:DELete:ALL')
         
+        # TODO: Fix window creation. Currently, error caused if quad windows not specified on PNA.
         for n in portNums: 
-          pna.write('DISPlay:WINDow:ENABle 1'.format(n))
+          pna.write('DISPlay:WINDow{}:STATE ON'.format(n))
           self.clearWindow(n)
     
         if nPoints: pna.write('SENSe1:SWEep:POINts '+str(nPoints))
@@ -164,7 +165,7 @@ class AgilentPNAx:
         if centFreq and spanFreq: 
           pna.write('SENSe1:FREQuency:CENTer {}'.format(centFreq))
           pna.write('SENSe1:FREQuency:SPAN {}'.format(spanFreq))
-      if srcPower:
+        if srcPower:
           for i in [1,2,3,4]:
               maxPower = pna.query('SOURce{}:POWer? MAX'.format(i))
               minPower = pna.query('SOURce1:POWer? MIN')
@@ -180,7 +181,7 @@ class AgilentPNAx:
         if ifBandwidth: pna.write('SENSe1:BANDwidth {}'.format(ifBandwidth))
 
         
-    def sMeas(self, sPorts, savedir, localsavedir, testname, pnaparms = None, bal = False):
+    def sMeas(self, sPorts, savedir, localsavedir, testname, power = None, pnaparms = None, bal = False, phase = 0):
         '''
         Perform and save an s-parameter measurement.
         
@@ -198,6 +199,8 @@ class AgilentPNAx:
             A dictionary containing test parameters to set on the pna.
         bal : bool
             Toggles Balanced-Balanced measurements with integrated true mode stimulus on/off.
+        phase : float
+            Phase offset in degrees to be applied to balanced port 1.
             
         Returns:
         ----------
@@ -237,29 +240,40 @@ class AgilentPNAx:
                 s = 'S{}_{}'.format(i,j)
                 sParms.append('S{}_{}'.format(i,j))
                 measName = 'meas'+s 
-                print(measName)
                 pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
                 if bal:
+                    pna.write("CALCulate:PARameter:SELect \'{}\'".format(measName))
                     pna.write("CALCulate:FSIMulator:BALun:PARameter:STATe ON")
-                    pna.write("CALCulate:FSIMulator:BALun:PARameter:BBALanced:DEFine {}".format(sParmsBBal[i-1,j-1]))
+                    pna.write("CALCulate:FSIMulator:BALun:PARameter:BBALanced:DEFine {}".format(sParmsBBal[int(i)-1,int(j)-1]))
                 pna.write("DISPlay:WINDow{}:TRACe{}:FEED \'{}\'".format(i,j,measName))
         
         
-#        for s in sParms:
-#            measName = 'meas'+s 
-#            print(measName)
-#            pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
-#            pna.write('CALCulate1:PARameter:SELect \"{}\"'.format(measName))
-#            pna.write("DISPlay:WINDow1:TRACe1:FEED \'{}\'".format(measName)) # duplicate trace number
         if bal: 
             pna.write("CALCulate1:FSIMulator:BALun:STIMulus:MODE TM")
             pna.write("CALCulate:FSIMulator:BALun:DEVice BBALanced")
             pna.write("CALCulate:FSIMulator:BALun:TOPology:BBALanced:PPORts 1,3,2,4")
+  #          pna.write("CALCulate:FSIMulator:BALun:FIXTure:OFFSet:PHASe 0")
+  #          pna.write("CALCulate:FSIMulator:BALun:BPORt1:OFFSet:PHASe {}".format(phase))
         else:
             pna.write("CALCulate1:FSIMulator:BALun:STIMulus:MODE SE")
-            
-                
-        pna.timeout = 450000
+
+            if bal:
+                portnames = ['Bal Port 1','Bal Port 2']
+            else:
+                portnames = ['Port 1', 'Port 2', 'Port 3', 'Port 4']
+            for p in portnames:
+#                maxPower = pna.query('SOURce1:POWer? MAX,\"{}\"'.format(p))
+#                minPower = pna.query('SOURce1:POWer? MIN,\"{}\"'.format(p))
+#                if power >= minPower and power <= maxPower:
+                    print('Setting {} power to {} dbm.'.format(p,power))
+                    pna.write('SOURce1:POWer {},\"{}\"'.format(power,p))
+#                else:
+#                    warnings.warn('Specified source power of {} for {} not\
+#                                    within the allowed range of {} to {} dBm.'
+#                                    .format(power,p,minPower,maxPower)) 
+#                            
+        pna.timeout = 9000000
+#        pna.write('SENSe1:CORRection OFF') # turn cal off for testing
         pna.write("SENSe1:SWEep:MODE SINGle") 
         pna.query('*OPC?')
 #            pna.write("DISPlay:WINDow1:TRACe1:DELete")    

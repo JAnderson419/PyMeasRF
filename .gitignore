@@ -1,2 +1,4 @@
 
 userTests.py
+*.pyc
+*.pyc
