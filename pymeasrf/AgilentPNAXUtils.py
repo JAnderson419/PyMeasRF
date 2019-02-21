@@ -274,7 +274,6 @@ class AgilentPNAx:
 #                                    .format(power,p,minPower,maxPower)) 
 #                            
         pna.timeout = 9000000
-#        pna.write('SENSe1:CORRection OFF') # turn cal off for testing
         pna.write("SENSe1:SWEep:MODE SINGle") 
         pna.query('*OPC?')
 #            pna.write("DISPlay:WINDow1:TRACe1:DELete")    

@@ -112,7 +112,6 @@ class SParmMeas(PNAsmuMeas):
         self.power = power
         self.phaseOffset = phaseOffset
         
-        
     def measure(self, smuX = None, smuY = None, smuZ = None):
         '''
         Uses SMUs as V source and measures time, V force, and I sense. 
