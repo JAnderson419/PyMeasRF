@@ -8,6 +8,7 @@ HybridMEMS
 import visa
 import numpy as np
 import re as re
+import warnings
 
 class AgilentPNAx:
     def __init__(self, resource):
@@ -46,7 +47,7 @@ class AgilentPNAx:
           self.visaobj = rm.open_resource(resource)
         except visa.VisaIOError as e:
           print(e.args)
-          exit
+          raise SystemExit(1)
 
     def pnaInitSetup(self):
         '''
@@ -110,8 +111,8 @@ class AgilentPNAx:
         self.visaobj.close()
         
         
-    def pnaSetup(self, portNums, ifBandwidth = None,startFreq = None, stopFreq = None,
-                 centFreq = None, spanFreq = None, nPoints = None, 
+    def pnaSetup(self, portNums, ifBandwidth = None, startFreq = None, stopFreq = None,
+                 centFreq = None, spanFreq = None, srcPower = None, nPoints = None, 
                  avgMode = None, nAvg = None):
         '''
         PNA measurement setup. Unpacks a dict of setup 
@@ -130,6 +131,8 @@ class AgilentPNAx:
             frequency range of measurement. Max: 50 GHz. Cannot be used with start/stopFreq.
         startFreq & stopFreq : int
             frequency range of measurement. Max: 50 GHz. Cannot be used with center/spanFreq.
+        srcPower : int
+            Source power in dBm to set all the ports at.
         nPoints : int
             number of points in measurement (1 to 32,001)
         avgMode : string
@@ -147,8 +150,9 @@ class AgilentPNAx:
         pna = self.visaobj
         pna.write('CALCulate:PARameter:DELete:ALL')
         
+        # TODO: Fix window creation. Currently, error caused if quad windows not specified on PNA.
         for n in portNums: 
-          pna.write('DISPlay:WINDow:ENABle 1'.format(n))
+          pna.write('DISPlay:WINDow{}:STATE ON'.format(n))
           self.clearWindow(n)
     
         if nPoints: pna.write('SENSe1:SWEep:POINts '+str(nPoints))
@@ -161,13 +165,23 @@ class AgilentPNAx:
         if centFreq and spanFreq: 
           pna.write('SENSe1:FREQuency:CENTer {}'.format(centFreq))
           pna.write('SENSe1:FREQuency:SPAN {}'.format(spanFreq))
+        if srcPower:
+          for i in [1,2,3,4]:
+              maxPower = pna.query('SOURce{}:POWer? MAX'.format(i))
+              minPower = pna.query('SOURce1:POWer? MIN')
+              if srcPower >= minPower and srcPower <= maxPower:
+                  pna.write('SOURce{}:POWer1 {}'.format(i,srcPower))
+              else:
+                  warnings.warn('Specified source power of {} for port {} not\
+                                within the allowed range of {} to {} dBm.'
+                                .format(srcPower,i,minPower,maxPower))
         ###
         if avgMode: pna.write('SENSe1:AVERage:MODE {}'.format(avgMode))
         if nAvg: pna.write('SENSe1:AVERage:COUNt {}'.format(nAvg))
         if ifBandwidth: pna.write('SENSe1:BANDwidth {}'.format(ifBandwidth))
 
         
-    def sMeas(self, sPorts, savedir, localsavedir, testname, pnaparms = None):
+    def sMeas(self, sPorts, savedir, localsavedir, testname, power = None, pnaparms = None, bal = False, phase = 0):
         '''
         Perform and save an s-parameter measurement.
         
@@ -183,6 +197,10 @@ class AgilentPNAx:
             Identifier for the test that will be used in saved filenames.
         pnaparms : dict
             A dictionary containing test parameters to set on the pna.
+        bal : bool
+            Toggles Balanced-Balanced measurements with integrated true mode stimulus on/off.
+        phase : float
+            Phase offset in degrees to be applied to balanced port 1.
             
         Returns:
         ----------
@@ -193,6 +211,12 @@ class AgilentPNAx:
         ValueError
             Number of ports doesn't match physically available port numbers.
         '''
+        
+        sParmsBBal = np.array([['SDD11','SDD12','SDC11','SDC12'],
+                               ['SDD21','SDD22','SDC21','SDC22'],
+                               ['SCD11','SCD12','SCC11','SCC12'],
+                               ['SCD21','SCD22','SCC21','SCC22']])
+        
         pna = self.visaobj
         
         sParms = []
@@ -201,6 +225,9 @@ class AgilentPNAx:
         if len(nums) < 1 or len(nums) > 4:
             raise ValueError('Please Specify a number of ports between 1 and 4. '
                              'Currently, {} ports are specified.'.format(str(len(nums))))
+        if bal and len(nums) != 4:
+            raise ValueError('Bal-Bal measurement selected but number of ports does not equal 4.')
+            
         filename = '{}.s{}p'.format(testname,str(len(nums)))
         if pnaparms:
             self.pnaSetup(nums, **pnaparms)
@@ -213,18 +240,40 @@ class AgilentPNAx:
                 s = 'S{}_{}'.format(i,j)
                 sParms.append('S{}_{}'.format(i,j))
                 measName = 'meas'+s 
-                print(measName)
                 pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
+                if bal:
+                    pna.write("CALCulate:PARameter:SELect \'{}\'".format(measName))
+                    pna.write("CALCulate:FSIMulator:BALun:PARameter:STATe ON")
+                    pna.write("CALCulate:FSIMulator:BALun:PARameter:BBALanced:DEFine {}".format(sParmsBBal[int(i)-1,int(j)-1]))
                 pna.write("DISPlay:WINDow{}:TRACe{}:FEED \'{}\'".format(i,j,measName))
         
         
-#        for s in sParms:
-#            measName = 'meas'+s 
-#            print(measName)
-#            pna.write("CALCulate:PARameter:DEFine:EXTended \'{}\',{}".format(measName,s))
-#            pna.write('CALCulate1:PARameter:SELect \"{}\"'.format(measName))
-#            pna.write("DISPlay:WINDow1:TRACe1:FEED \'{}\'".format(measName)) # duplicate trace number
-        pna.timeout = 450000
+        if bal: 
+            pna.write("CALCulate1:FSIMulator:BALun:STIMulus:MODE TM")
+            pna.write("CALCulate:FSIMulator:BALun:DEVice BBALanced")
+            pna.write("CALCulate:FSIMulator:BALun:TOPology:BBALanced:PPORts 1,3,2,4")
+  #          pna.write("CALCulate:FSIMulator:BALun:FIXTure:OFFSet:PHASe 0")
+  #          pna.write("CALCulate:FSIMulator:BALun:BPORt1:OFFSet:PHASe {}".format(phase))
+        else:
+            pna.write("CALCulate1:FSIMulator:BALun:STIMulus:MODE SE")
+
+        if power != None:
+            if bal:
+                portnames = ['Bal Port 1','Bal Port 2']
+            else:
+                portnames = ['Port 1', 'Port 2', 'Port 3', 'Port 4']
+            for p in portnames:
+#                maxPower = pna.query('SOURce1:POWer? MAX,\"{}\"'.format(p))
+#                minPower = pna.query('SOURce1:POWer? MIN,\"{}\"'.format(p))
+#                if power >= minPower and power <= maxPower:
+                    print('Setting {} power to {} dbm.'.format(p,power))
+                    pna.write('SOURce1:POWer {},\"{}\"'.format(power,p))
+#                else:
+#                    warnings.warn('Specified source power of {} for {} not\
+#                                    within the allowed range of {} to {} dBm.'
+#                                    .format(power,p,minPower,maxPower)) 
+#                            
+        pna.timeout = 9000000
         pna.write("SENSe1:SWEep:MODE SINGle") 
         pna.query('*OPC?')
 #            pna.write("DISPlay:WINDow1:TRACe1:DELete")    
@@ -305,3 +354,45 @@ class AgilentPNAx:
         N/A
         '''
         print(self.visaobj.query('CSET:CATalog?'))
+        
+    def saveState(self, filename):
+        '''
+        Saves the stimulus state of the instrument in an .sta file.
+        
+        Parameters:
+        -----------
+        filename: filename (including path) you wish to save data under.
+        
+        Returns:
+        -----------
+        N/A
+        '''
+        self.visaobj.write('MMEMory:STORe:STATe {}'.format(filename))
+
+    def saveCal(self, filename):
+        '''
+        Saves the calibration of the instrument in a .cal file.
+        
+        Parameters:
+        -----------
+        filename: filename (including path) you wish to save data under.
+        
+        Returns:
+        -----------
+        N/A
+        '''
+        self.visaobj.write('MMEMory:STORe:CORRection {}'.format(filename))
+        
+    def saveStateCal(self, filename):
+        '''
+        Saves the stimulus settings and calibration of the instrument in a .csa file.
+        
+        Parameters:
+        -----------
+        filename: filename (including path) you wish to save data under.
+        
+        Returns:
+        -----------
+        N/A
+        '''
+        self.visaobj.write('MMEMory:STORe:CSARchive {}'.format(filename))
