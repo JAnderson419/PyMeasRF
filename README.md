@@ -1,4 +1,4 @@
-# PNA-SMU-UTILS
+# PyMeasRF
 
 A Python module for controlling networked test and measurement equipment, implementing PyVISA.
 Currently provides Python drivers for the following test equipment:
