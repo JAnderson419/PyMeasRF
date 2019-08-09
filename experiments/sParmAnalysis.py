@@ -30,16 +30,17 @@ datadir = r''  # location of device SnP files
 opendir = r''  # location of device open deembedding files
 
 # Device overview plot
-filterRegex = r'die3_[A]1_.*drain0_\dV_gate0_\dV_drive0_8V'  # regex to filter SNP files in datadir
-regexSinglePlot = r'die3_A1_.*drain0_6V_gate0_8V_drive0_8V'  # regex to select single device for detailed plots
+filterRegex = r'.*'  # regex to filter SNP files in datadir
+regexSinglePlot = r''  # regex to select single device for detailed plots
 
 
 ####################
 # User Inputs ######
 ####################
 
-switch23 = True  # Switches position of ports in code so that mixed mode input is 12
-                # and output is 34. Default is 13 input, 24 output.
+
+mixedmodeport = [1, 3, 0, 2]  # 1+, 1-, 2+, 2-
+# Default is 13 input, 24 output.
 debug = False
 deembed = 0     # 0 - no deembedding
                 # 1- Deembeds data with open that has matching bias conditions,
@@ -47,11 +48,11 @@ deembed = 0     # 0 - no deembedding
 bal = False  # Set true if importing true mode SNP data
 
 ### plot options ###
-plotS = 0  # Plots singled ended and differential reflection parameters  for regexSinglePlot
-plotZ = 0  # Plots input impedances: re, im, and mag  for regexSinglePlot
+plotS = 1  # Plots singled ended and differential reflection parameters  for regexSinglePlot
+plotZ = 1  # Plots input impedances: re, im, and mag  for regexSinglePlot
 plotSmith = 0  # Plots reflection parameters  for regexSinglePlot
-plot21 = 0  # Plots Sdd21 and Sdd12: mag, phase, and ifft  for regexSinglePlot
-plot21all = 0  # Plots Smm21 mag for regexSinglePlot
+plot21 = 1  # Plots Sdd21 and Sdd12: mag, phase, and ifft  for regexSinglePlot
+plot21all = 1  # Plots Smm21 mag for regexSinglePlot
 plotgmddRatio = 0  # Plots ratio of gmdd to gmcc, gmdc, and gmcd  for regexSinglePlot
 plotgm = 1  # Plots gmdd for filterRegex
 
@@ -194,9 +195,6 @@ def search_filelist(filelist, bias_regex, power_regex = None):
 
 
 def main():
-    if bal and switch23:
-        warn("Mixed mode input and switch23 (12 in, 34 out) selected. Port numbers may be incorrect, depending on true mode port definition on PNA.")
-    
     
     data = []
     keys = ['filename', 'data', 'mmdata']
@@ -267,14 +265,12 @@ def main():
                     rfdata.s[i, :, :] = gmm_reorder(rfdata.s[i, :, :])
                 sedata = cp.deepcopy(rfdata)
                 sedata.gmm2se(2)
-                sedata.renumber([0, 1, 2, 3], [0, 2, 1, 3])
+                sedata.renumber([0, 1, 2, 3], mixedmodeport)
                 vals = [f, sedata, rfdata]
             else:
-                if switch23:
-                    rfdata.renumber([0, 1, 2, 3], [0, 2, 1, 3])
                 mmdata = cp.deepcopy(rfdata)
                 # renumber ports for single ended to differential conversion
-                mmdata.renumber([0, 1, 2, 3], [0, 2, 1, 3])
+                mmdata.renumber([0, 1, 2, 3], mixedmodeport)
                 mmdata.se2gmm(2)
                 # mmdata now in form  Sdd  Sdc
                 #                     Scd  Scc
