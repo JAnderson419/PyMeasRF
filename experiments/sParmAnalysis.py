@@ -26,12 +26,12 @@ other programs such as ADS or Matlab.
 '''
 
 
-datadir = r''  # location of device SnP files
+datadir = r'D:\19_MIDAS_14LPP'  # location of device SnP files
 opendir = r''  # location of device open deembedding files
 
 # Device overview plot
-filterRegex = r'.*'  # regex to filter SNP files in datadir
-regexSinglePlot = r''  # regex to select single device for detailed plots
+filterRegex = r'2019_MIDAS_14LPP_die1_18.*'  # regex to filter SNP files in datadir
+regexSinglePlot = r'2019_MIDAS_14LPP_die1_18_ITMS_-10dbm_6_drain0_3V_gate0_8V_drive0_8V'  # regex to select single device for detailed plots
 
 
 ####################
