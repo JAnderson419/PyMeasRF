@@ -25,7 +25,11 @@ class AgilentPNAx:
         N/A
         '''
         self.connect(resource)
-    
+        # socket communication slow - add delay between write and read
+        # to prevent "103 - invalid separator" errors
+        if re.search(r'.*SOCKET.*', resource):
+            self.visaobj.query_delay = 1 
+            self.visaobj.read_termination = '\n'
     
     def connect(self, resource):
         '''
