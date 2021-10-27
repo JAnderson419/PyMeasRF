@@ -165,29 +165,35 @@ class SMUmeas():
             ax1.set_ylabel('Voltage (V)')
             
 def main():
+    biases1 = np.linspace(-5, 5, 25)
+    biases = np.append(np.linspace(0, -5, 13), biases1)
+    biases = np.append(biases, biases1[::-1])
+    biases = np.append(biases, np.linspace(-5, 0, 13))
     smus = [
 #          k2400.Keithley2400('GPIB1::24::INSTR', label='gate', voltages = np.linspace(0,20,5)),
-          k2400.Keithley2400('GPIB0::25::INSTR', label ='drain', voltages = np.linspace(.05,2,40))
+          k2400.Keithley2400('GPIB0::4::INSTR', label='bias', voltages=biases)
 #          k2400.Keithley2400('GPIB1::26::INSTR', label = 'drive', voltages = [0])
            ]
 
     compliance = 0.100 #Amps IE 105uA = 0.000105 
-    maxVoltage = 1 #Maximum expected voltage to be used 
-    delayTime = 0 #Time between setting SMU voltage and measurement in seconds
+    maxVoltage = 5 #Maximum expected voltage to be used
+    delayTime = 2 #Time between setting SMU voltage and measurement in seconds
 
 #    testname = 'HeatingTest_SteadyStateRes_180sDelay_180sCool_2Vmax' # name snp files will be saved as current file name format is as follows:
-    testname = 'HeatingTest_180sSoak_180sCool_2Vmax'
+    testname = 'NNO_actuator_test_4-2-3_3V_broken'
     #'testname_VgX_XVdY_YVdrZ_Z.sXp'
     #So for example if testname is load and the Vg = 1.0V, Vdr=2.0V, Vd=3.0V and it is a 2 port measurement the file output will look as follows:
     #load_Vg1_0Vd2_0Vg3_0.s2p
-    localsavedir = r'C:\Users\ander906\Google Drive\Test Equipment\Home\microbolometer' # Directory where SMU data will be saved    
+    localsavedir = r'C:\Users\Jackson\Desktop\NNO' # Directory where SMU data will be saved
     
     for x in smus: 
         x.smuSetup(maxVoltage, compliance)
         x.visaobj.write(':SYSTem:BEEPer:STATe 0')
-    test = SMUmeas(smus, localsavedir, testname, delay = 0, measTime = 180, postMeasDelay = 180)
+    test = SMUmeas(smus, localsavedir, testname, delay=delayTime, measTime=0, postMeasDelay=0)
     
     test.measure()
+    for x in smus:
+        x.disconnect()
             
 if __name__ == "__main__":
     main()

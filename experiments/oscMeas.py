@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 def oscMeas():
     plot = 0
-    savedir = r'C:\Users\BRKAdmin\Documents\Shreyas'
+    savedir = r'SaveDir'
     testname = r'test'
     vpp = [0.02,0.1,0.5,1]
     vOffset = [-0.93, -0.75, -0.50, 0]
